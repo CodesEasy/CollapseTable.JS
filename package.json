@@ -1,0 +1,31 @@
+{
+  "name": "collapsetable",
+  "version": "1.0.0",
+  "description": "CollapseTable: lightweight, dependency-free JS to make HTML tables responsive by collapsing overflow columns into per-row details (+/− toggle).",
+  "homepage": "https://github.com/CodesEasy/CollapseTable.JS#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodesEasy/CollapseTable.JS.git"
+  },
+  "bugs": {
+    "url": "https://github.com/CodesEasy/CollapseTable.JS/issues"
+  },
+  "author": "Vishnu (Codes Easy) <https://vishnu.wiki> (https://www.codeseasy.com)",
+  "license": "MIT",
+  "keywords": ["table", "responsive", "collapse", "details", "javascript", "library"],
+  "main": "dist/collapsetable.js",
+  "module": "dist/collapsetable.js",
+  "unpkg": "dist/collapsetable.min.js",
+  "jsdelivr": "dist/collapsetable.min.js",
+  "files": ["dist", "LICENSE", "README.md"],
+  "sideEffects": false,
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && cpy src/CollapseTable.js dist --rename=collapsetable.js --flat && terser dist/collapsetable.js --compress --mangle --source-map content=inline,url=collapsetable.min.js.map -o dist/collapsetable.min.js"
+  },
+  "devDependencies": {
+    "cpy-cli": "^6.0.0",
+    "rimraf": "^6.0.1",
+    "terser": "^5.43.1"
+  }
+}
