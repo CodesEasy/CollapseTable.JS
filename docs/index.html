@@ -1,0 +1,644 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>CollapseTable.JS · Responsive HTML tables with a per-row details panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="CollapseTable.JS — lightweight, dependency-free JS to make HTML tables responsive by collapsing overflow columns into a per-row details panel." />
+    <meta name="theme-color" content="#0b0c10" />
+    <meta property="og:title" content="CollapseTable.JS" />
+    <meta property="og:description" content="Make any HTML table responsive. Low-priority columns collapse into a per-row details panel with a +/− toggle." />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="data:,">
+    <style>
+        :root{
+            --bg: #0b0c10;
+            --bg-elev: #121317;
+            --text: #e8eaf0;
+            --muted: #a7b0c0;
+            --accent: #8ab4ff;
+            --accent-2: #61dafb;
+            --border: #292c33;
+            --ok: #27c93f;
+            --warn:#ffb020;
+            --err:#ff5f56;
+            --code-bg:#0f1115;
+            --code-br:#20232a;
+            --chip-bg:#151822;
+            --shadow: 0 10px 30px rgba(0,0,0,.35);
+            --ring: 2px solid #3b82f6;
+        }
+        @media (prefers-color-scheme: light){
+            :root{
+                --bg:#ffffff; --bg-elev:#f6f8fb; --text:#12131a; --muted:#5b6473;
+                --accent:#0b5cff; --accent-2:#0bb5ff; --border:#e6eaf0;
+                --code-bg:#0f1115; --code-br:#20232a; --chip-bg:#eef2ff;
+                --shadow:0 10px 30px rgba(17,24,39,.08);
+            }
+        }
+
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        html{scroll-behavior:smooth}
+        body{
+            margin:0;background:var(--bg);color:var(--text);
+            font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif
+        }
+        a{color:var(--accent);text-decoration:none}
+        a:hover{text-decoration:underline}
+        .container{max-width:1100px;margin:0 auto;padding:24px}
+        .hero{padding:42px 0 16px}
+        .title{font-size:40px;line-height:1.1;margin:0 0 10px}
+        .lead{color:var(--muted);max-width:900px}
+        .chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 6px}
+        .chip{background:var(--chip-bg);color:var(--text);border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px}
+
+        .bar{position:sticky;top:0;background:var(--bg-elev);border-bottom:1px solid var(--border);z-index:50}
+        .bar .inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 24px;position:relative}
+        .bar a{font-weight:600;white-space:nowrap}
+        nav.top-links{display:flex;gap:8px;flex-wrap:wrap}
+        .spacer{flex:1}
+        .btn{
+            display:inline-flex;align-items:center;gap:8px;
+            border:1px solid var(--border);background:var(--bg-elev);
+            padding:10px 14px;border-radius:10px;color:var(--text);
+            text-decoration:none;box-shadow:var(--shadow)
+        }
+        .btn:hover{transform:translateY(-1px)}
+        .btn:focus-visible{outline:var(--ring);outline-offset:2px}
+
+        /* ===== Responsive nav (Bootstrap-like, no deps) ===== */
+        .nav-toggle{
+            display:none; /* shown on small screens */
+            align-items:center;justify-content:center;
+            width:42px;height:40px;
+            border:1px solid var(--border);
+            background:var(--bg-elev);
+            border-radius:10px;color:var(--text);
+            box-shadow:var(--shadow);cursor:pointer;
+        }
+        .nav-toggle:focus-visible{outline:var(--ring);outline-offset:2px}
+        .nav-icon,
+        .nav-icon::before,
+        .nav-icon::after{
+            display:block;width:20px;height:2px;
+            background:var(--text);border-radius:2px;
+            position:relative;
+            transition:transform .2s ease, opacity .2s ease, top .2s ease;
+        }
+        .nav-icon::before,.nav-icon::after{content:"";position:absolute;left:0}
+        .nav-icon::before{top:-6px}
+        .nav-icon::after{top:6px}
+
+        @media (max-width: 760px){
+            .nav-toggle{display:inline-flex}
+            nav.top-links{
+                display:none; /* hidden until opened */
+                position:absolute; left:0; right:0; top:100%;
+                padding:12px 24px; gap:10px; flex-direction:column;
+                background:var(--bg-elev); border-bottom:1px solid var(--border);
+                box-shadow:var(--shadow); z-index:60;
+            }
+            .bar[data-open="true"] nav.top-links{display:flex}
+            nav.top-links .btn{width:100%; justify-content:center}
+            /* Animate hamburger to X */
+            .bar[data-open="true"] .nav-icon{transform:rotate(45deg)}
+            .bar[data-open="true"] .nav-icon::before{top:0; transform:rotate(-90deg)}
+            .bar[data-open="true"] .nav-icon::after{opacity:0}
+        }
+
+        h2{margin-top:40px;font-size:26px}
+        h3{margin-top:30px;font-size:20px}
+        .section{padding:10px 0 6px}
+        .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+
+        /* Grid (mobile-first) */
+        .grid{display:grid;gap:16px;grid-auto-flow:row}
+        .grid-2{grid-template-columns:minmax(0,1fr)}
+        @media (min-width:900px){ .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+        /* Code blocks (scrollable, never overflow page width) */
+        .code{
+            position:relative;
+            background:var(--code-bg);
+            border:1px solid var(--code-br);
+            border-radius:12px;
+            color:#e2e8f0;
+            overflow:hidden;
+            max-width:100%;
+        }
+        .code pre{
+            margin:0;
+            padding:14px 16px;
+            margin-top:40px;         /* space for copy button */
+            overflow-x:auto;
+            -webkit-overflow-scrolling:touch;
+            max-width:100%;
+        }
+        .code code{
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+            font-size:13px;line-height:1.6;
+            white-space:pre;         /* horizontal scroll inside the block only */
+            display:block;
+            max-width:100%;
+        }
+        .code.wrap code{ white-space:pre-wrap; word-break:break-word; }
+
+        .copy{
+            position:absolute;top:8px;right:8px;
+            padding:6px 10px;border-radius:8px;font:inherit;font-size:12px;
+            border:1px solid #334155;background:#0b1220;color:#e2e8f0;cursor:pointer;
+        }
+        .copy:hover{background:#111827}
+        .copy:active{transform:translateY(1px)}
+        .copy:focus-visible{outline:var(--ring);outline-offset:2px}
+        .copy.success{background:#065f46;border-color:#065f46}
+
+        /* Inline code: wrap to avoid layout overflow */
+        :not(pre) > code{
+            background:var(--bg-elev);
+            border:1px solid var(--border);
+            border-radius:6px;
+            padding:0 .3em;
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+            font-size:.95em;
+            white-space:normal;
+            overflow-wrap:anywhere;
+            word-break:break-word;
+            max-width:100%;
+            display:inline;
+        }
+
+        /* Nice horizontal scrollbar for code (WebKit) */
+        .code pre::-webkit-scrollbar{height:8px}
+        .code pre::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:999px}
+
+        .list{padding-left:20px}
+        .kbd{
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+            background:var(--bg-elev);border:1px solid var(--border);
+            padding:2px 6px;border-radius:6px;font-size:12px
+        }
+        .note{border-left:4px solid var(--accent);padding:10px 12px;background:var(--bg-elev);border:1px solid var(--border);border-left-color:var(--accent);border-radius:12px}
+        footer{margin:50px 0 0;padding:24px 0;border-top:1px solid var(--border);color:var(--muted)}
+        .toc{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+        .toc a{border:1px solid var(--border);background:var(--bg-elev);border-radius:999px;padding:6px 10px;font-size:12px}
+        .kbd-row{display:inline-flex;gap:8px;align-items:center}
+
+        .sr-only{
+            position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;
+        }
+    </style>
+</head>
+<body>
+<header class="bar">
+    <div class="inner">
+        <a href="#top">CollapseTable.JS</a>
+        <span class="spacer"></span>
+
+        <!-- Mobile hamburger toggle -->
+        <button class="nav-toggle" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="nav-icon" aria-hidden="true"></span>
+            <span class="sr-only">Menu</span>
+        </button>
+
+        <nav id="primary-nav" class="top-links" aria-label="Primary">
+            <a class="btn" href="./demos/cdn.html">Live Demo</a>
+            <a class="btn" href="./npm-usage.html">npm Usage</a>
+            <a class="btn" href="https://github.com/CodesEasy/CollapseTable.JS" rel="noopener">GitHub</a>
+        </nav>
+    </div>
+</header>
+
+<main id="top" class="container">
+    <section class="hero">
+        <h1 class="title">CollapseTable.JS</h1>
+        <p class="lead">Make any HTML table <strong>responsive</strong>: low-priority columns automatically <strong>collapse</strong> into a per-row <strong>details</strong> panel with a <strong>+/−</strong> toggle.</p>
+        <div class="chips">
+            <span class="chip">v<span id="v">1.1.1</span></span>
+            <span class="chip">No dependencies</span>
+            <span class="chip">Accessible</span>
+            <span class="chip">UMD / ESM / CJS</span>
+        </div>
+        <nav class="toc" aria-label="On this page">
+            <a href="#features">Features</a>
+            <a href="#quick-start">Quick Start</a>
+            <a href="#npm">npm Install</a>
+            <a href="#how-it-works">How it works</a>
+            <a href="#api">API</a>
+            <a href="#options">Options</a>
+            <a href="#styling">Styling</a>
+            <a href="#a11y">Accessibility</a>
+            <a href="#tips">Tips</a>
+            <a href="#cdn">CDN links</a>
+            <a href="#license">License</a>
+        </nav>
+    </section>
+
+    <section id="features" class="section">
+        <h2>Features</h2>
+        <ul class="list">
+            <li>📱 Keeps important columns visible; folds the rest into a details view on small screens</li>
+            <li>➕/➖ Per-row toggle (keyboard: <span class="kbd-row"><kbd class="kbd">Enter</kbd> <span>or</span> <kbd class="kbd">Space</kbd></span>)</li>
+            <li>♿ Accessible (<code>aria-expanded</code>, <code>aria-controls</code>, labeled details region with <code>role="region"</code> &amp; <code>aria-live="polite"</code>)</li>
+            <li>🧩 Zero dependencies, tiny footprint</li>
+            <li>⚙️ Production-ready: Resize/Mutation/Intersection observers, hidden-container deferral, stable row IDs, multi-<code>&lt;tbody&gt;</code> support</li>
+            <li>🎛️ Options for custom layout and rendering (<code>tableLayout</code>, <code>detailsRender</code>)</li>
+            <li>📏 Table is <code>width: 100%</code>, cells are left-aligned, and a control column is auto-inserted as the first column</li>
+        </ul>
+    </section>
+
+    <section id="quick-start" class="section">
+        <h2>Quick Start (CDN)</h2>
+
+        <div class="grid grid-2">
+            <div class="card">
+                <h3>Pinned version (recommended)</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.1.1/dist/collapsetable.min.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Always latest</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>&lt;script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@latest/dist/collapsetable.min.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-top:16px">
+            <div class="card">
+                <h3>Initialize</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>&lt;script&gt;
+  var ct = new CollapseTable();
+  // target can be: "orders" (id without #), "#orders", ".orders-table", "table.responsive", or a &lt;table&gt; element
+  ct.set("table-id-here");
+&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Use a local file (no CDN)</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>&lt;script src="/path/to/collapsetable.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var ct = new CollapseTable();
+  ct.set("table1");
+&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <p class="note" style="margin-top:16px">Prefer a full example? See the <a href="./demos/cdn.html">Live Demo</a>.</p>
+    </section>
+
+    <section id="npm" class="section">
+        <h2>Install via npm</h2>
+
+        <div class="grid grid-2">
+            <div class="card">
+                <h3>Install</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>npm i @codeseasy/collapsetable</code></pre>
+                </div>
+            </div>
+            <div class="card">
+                <h3>ESM</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-top:16px">
+            <div class="card">
+                <h3>CommonJS</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>const CollapseTable = require('@codeseasy/collapsetable');
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+            <div class="card">
+                <h3>More (TypeScript, bundlers, frameworks)</h3>
+                <p>See the dedicated guide: <a href="./npm-usage.html">npm-usage.html</a></p>
+            </div>
+        </div>
+    </section>
+
+    <section id="how-it-works" class="section">
+        <h2>How collapsing works</h2>
+        <ul class="list">
+            <li><code>data-priority</code> on each <code>&lt;th&gt;</code> controls importance
+                <ul class="list">
+                    <li><code>1</code> = most important (<strong>never hidden</strong>)</li>
+                    <li>Higher numbers (<code>2</code>, <code>3</code>, <code>4</code> …) hide earlier as space shrinks</li>
+                </ul>
+            </li>
+            <li><code>data-min</code> (px) is a width hint to improve fit decisions</li>
+            <li>Optional <code>data-label</code> overrides the label inside the details panel</li>
+            <li>A control column is inserted as the <strong>first</strong> column if missing (holds the +/− toggle)</li>
+        </ul>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>&lt;th data-priority="4" data-min="160" data-label="Placed On"&gt;Date&lt;/th&gt;</code></pre>
+        </div>
+    </section>
+
+    <section id="api" class="section">
+        <h2>API (everything you need)</h2>
+
+        <h3>Constructor</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>const ct = new CollapseTable(globalOptions?);</code></pre>
+        </div>
+        <p><strong>globalOptions</strong> (object, optional): defaults shown under <a href="#options">Options</a>. Applied to all tables unless overridden per table.</p>
+
+        <h3>Attach / Detach tables</h3>
+        <h4><code>set(target, perTableOptions?)</code></h4>
+        <p>Attach CollapseTable to <em>one</em> table.</p>
+        <ul class="list">
+            <li><strong>target</strong> — table id without hash (<code>"orders"</code>), a CSS selector (<code>"#orders"</code>, <code>".orders-table"</code>, <code>"table.responsive"</code>), or an <code>HTMLTableElement</code>.</li>
+            <li><strong>perTableOptions</strong> — overrides global options for this table only.</li>
+        </ul>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.set("table1");
+ct.set("#table1");
+ct.set(document.getElementById("table1"));
+ct.set("table.responsive", { icons: { expand: "▶", collapse: "▼" } });</code></pre>
+        </div>
+
+        <h4><code>setAll(targets, perTableOptions?) → TableController[]</code></h4>
+        <p>Attach to <em>multiple</em> tables at once. Non-<code>&lt;table&gt;</code> elements are ignored.</p>
+        <ul class="list">
+            <li><strong>targets</strong> — CSS selector string, a single <code>Element</code>, a <code>NodeList</code>/<code>HTMLCollection</code>, or an <code>Array&lt;Element&gt;</code>.</li>
+        </ul>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.setAll("table.responsive");                       // all &lt;table class="responsive"&gt;
+ct.setAll(document.querySelectorAll(".report"));     // NodeList
+ct.setAll([tableA, tableB], { tableLayout: "fixed" });</code></pre>
+        </div>
+
+        <h4><code>unset(target)</code> / <code>unsetAll(targets)</code></h4>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.unset("table1");
+ct.unsetAll("table.responsive");</code></pre>
+        </div>
+
+        <h3>Refresh &amp; Controls</h3>
+        <div class="grid grid-2">
+            <div>
+                <h4><code>refresh(target?)</code></h4>
+                <p>Re-measure and refit columns (omit to refresh all).</p>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>ct.refresh();         // all
+ct.refresh("table1"); // one</code></pre>
+                </div>
+            </div>
+            <div>
+                <h4><code>expandAll(target?)</code> / <code>collapseAll(target?)</code></h4>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>ct.expandAll();            // all attached tables
+ct.collapseAll("table1");  // specific table</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <h4>Per-row helpers</h4>
+        <p>Control a single row by <em>index</em> (0-based across all <code>&lt;tbody&gt;</code> rows of that table) or by passing the row <code>&lt;tr&gt;</code>.</p>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.expandRow("table1", 0);
+ct.collapseRow("#table1", someTrElement);</code></pre>
+        </div>
+
+        <h3>Events</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.on("expand",   ({ table, row }) =&gt; {});
+ct.on("collapse", ({ table, row }) =&gt; {});
+ct.on("toggle",   ({ table, row, expanded }) =&gt; {});
+ct.on("refit",    ({ table, initial, anyHidden }) =&gt; {});
+ct.on("destroy",  ({ table }) =&gt; {}); // when a table is unset/destroyed
+
+// Unsubscribe:
+ct.off("expand", handler);</code></pre>
+        </div>
+        <ul class="list">
+            <li><strong>expand / collapse</strong>: <code>{ table: HTMLTableElement, row: HTMLTableRowElement }</code></li>
+            <li><strong>toggle</strong>: <code>{ table, row, expanded: boolean }</code></li>
+            <li><strong>refit</strong>: <code>{ table, initial: boolean, anyHidden: boolean }</code></li>
+            <li><strong>destroy</strong>: <code>{ table: HTMLTableElement }</code></li>
+        </ul>
+    </section>
+
+    <section id="options" class="section">
+        <h2>Options</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>{
+  controlWidth: 46,            // px for the +/− column
+  minWidthDefault: 140,        // px when no data-min and cannot measure
+  tableLayout: "auto",         // "auto" | "fixed"
+  deferWhenHidden: true,       // if container hidden, defer precise fit until visible
+
+  attrs: {
+    priority: "data-priority", // lower = more important (1 never hidden)
+    min: "data-min",           // width hint (px)
+    label: "data-label"        // custom label in details view
+  },
+
+  classNames: {
+    root: "ctbl",
+    control: "ctbl-control",
+    toggle: "ctbl-toggle",
+    details: "ctbl-details",
+    detailsInner: "ctbl-details-inner",
+    detail: "ctbl-detail",
+    name: "ctbl-name",
+    value: "ctbl-value",
+    hide: "ctbl-hide"
+  },
+
+  icons: { expand: "+", collapse: "−" },
+  strings: { toggleTitle: "Show more", show: "Show details", hide: "Hide details" },
+
+  // Optional custom details renderer:
+  // (row, hiddenColumns[], cells[]) => Node|string|void
+  detailsRender: undefined
+}</code></pre>
+        </div>
+
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>// Override for one table
+ct.set("#invoices", {
+  tableLayout: "fixed",
+  icons: { expand: "▶", collapse: "▼" },
+  strings: { toggleTitle: "More", show: "Show", hide: "Hide" }
+});
+
+// Global helpers
+ct.getOptions(); // clone of current global options
+ct.updateOptions({ tableLayout: "fixed" }); // update globals + refresh attached tables
+CollapseTable.version; // "1.1.1"</code></pre>
+        </div>
+    </section>
+
+    <section id="styling" class="section">
+        <h2>Styling</h2>
+        <p>A tiny stylesheet is injected automatically (scoped under <code>.ctbl</code>). Useful hooks if you want to theme:</p>
+        <div class="code">
+      <pre><code>.ctbl  .ctbl-control  .ctbl-toggle
+.ctbl-details  .ctbl-details-inner  .ctbl-details-row
+.ctbl-detail   .ctbl-name  .ctbl-value
+.ctbl-hide     .ctbl-vh</code></pre>
+        </div>
+        <p>The default details layout renders concise <strong>“Label: Value”</strong> items inline.</p>
+    </section>
+
+    <section id="a11y" class="section">
+        <h2>Accessibility</h2>
+        <ul class="list">
+            <li>Toggle buttons keep <code>aria-expanded</code> / <code>aria-controls</code> in sync.</li>
+            <li>Keyboard: <span class="kbd-row"><kbd class="kbd">Enter</kbd> <span>or</span> <kbd class="kbd">Space</kbd></span>.</li>
+            <li>Details wrapper is a labeled live region (<code>role="region"</code>, <code>aria-live="polite"</code>).</li>
+            <li>The control column hides entirely if nothing is collapsed, avoiding a blank first column.</li>
+        </ul>
+    </section>
+
+    <section id="tips" class="section">
+        <h2>Tips &amp; Troubleshooting</h2>
+        <ul class="list">
+            <li><strong>Nothing collapses on mobile?</strong> Ensure some headers use <code>data-priority="2"</code> (priority <code>1</code> is never hidden).</li>
+            <li><strong>Toggle not visible?</strong> The +/− control shows only when at least one non-priority-1 column is hidden.</li>
+            <li><strong>Using <code>display:none</code> containers?</strong> With <code>deferWhenHidden: true</code> (default), precise fitting is deferred until visible.</li>
+            <li><strong><code>colspan</code>/<code>rowspan</code> present?</strong> Collapsing is disabled if spans are detected; base styles still apply (a console warning is printed).</li>
+            <li><strong>Multiple <code>&lt;tbody&gt;</code> sections?</strong> Supported; row indices are 0-based across all data rows in order.</li>
+        </ul>
+    </section>
+
+    <section id="cdn" class="section">
+        <h2>CDN links</h2>
+        <ul class="list">
+            <li><strong>Pinned</strong>: <code>https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.1.1/dist/collapsetable.min.js</code></li>
+            <li><strong>Latest</strong>: <code>https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@latest/dist/collapsetable.min.js</code></li>
+        </ul>
+        <p>npm users: see <a href="./npm-usage.html"><code>npm-usage.html</code></a> for install + bundler notes.</p>
+    </section>
+
+    <section id="license" class="section">
+        <h2>License</h2>
+        <p>MIT © 2025 <a href="https://vishnu.wiki">Vishnu</a> (<a href="https://www.codeseasy.com">Codes Easy</a>).</p>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div>Built with ♥︎ — <a href="https://github.com/CodesEasy/CollapseTable.JS">GitHub</a> · <a href="./demos/cdn.html">Live Demo</a> · <a href="./npm-usage.html">npm Usage</a></div>
+        </div>
+    </footer>
+</main>
+
+<script>
+    // Mobile nav interactions
+    (() => {
+        const header = document.querySelector('.bar');
+        const toggle = document.querySelector('.nav-toggle');
+        const nav = document.getElementById('primary-nav');
+        if (!header || !toggle || !nav) return;
+
+        const close = () => {
+            header.removeAttribute('data-open');
+            toggle.setAttribute('aria-expanded','false');
+        };
+
+        toggle.addEventListener('click', () => {
+            const open = header.getAttribute('data-open') === 'true';
+            header.setAttribute('data-open', String(!open));
+            toggle.setAttribute('aria-expanded', String(!open));
+            if (!open) nav.querySelector('a')?.focus();
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (header.getAttribute('data-open') === 'true' && !header.contains(e.target)) close();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') close();
+        });
+
+        // Close after choosing a link
+        nav.addEventListener('click', (e) => {
+            if (e.target.closest('a')) close();
+        });
+
+        // Close if viewport resized to desktop
+        const mq = window.matchMedia('(min-width: 761px)');
+        mq.addEventListener?.('change', (ev) => { if (ev.matches) close(); });
+    })();
+
+    // Copy buttons
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.copy[data-copy]');
+        if (!btn) return;
+
+        const code = btn.parentElement?.querySelector('pre > code');
+        if (!code) return;
+
+        const text = code.innerText; // entities decoded
+        const old = btn.textContent;
+
+        const flash = (label) => {
+            btn.classList.add('success');
+            btn.textContent = label || 'Copied';
+            btn.setAttribute('aria-live', 'polite');
+            setTimeout(() => {
+                btn.textContent = old;
+                btn.classList.remove('success');
+            }, 1200);
+        };
+
+        try {
+            await navigator.clipboard.writeText(text);
+            flash('Copied');
+        } catch {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.inset = '0';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); flash('Copied'); }
+            catch { btn.textContent = 'Copy failed'; }
+            document.body.removeChild(ta);
+        }
+    });
+
+    // Version badge
+    document.getElementById('v').textContent='1.1.1';
+</script>
+</body>
+</html>

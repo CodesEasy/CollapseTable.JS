@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>CollapseTable.JS — npm & Framework Usage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Install and use @codeseasy/collapsetable with npm across React, Next.js, Vue 3, Svelte, and Angular. Types included, UMD/ESM/CJS friendly." />
+    <meta name="theme-color" content="#0b0c10" />
+    <meta property="og:title" content="CollapseTable.JS — npm & Framework Usage" />
+    <meta property="og:description" content="Install and use @codeseasy/collapsetable with npm across React, Next.js, Vue 3, Svelte, and Angular. Types included, UMD/ESM/CJS friendly." />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="data:,">
+    <style>
+        :root{
+            --bg: #0b0c10;
+            --bg-elev: #121317;
+            --text: #e8eaf0;
+            --muted: #a7b0c0;
+            --accent: #8ab4ff;
+            --accent-2: #61dafb;
+            --border: #292c33;
+            --code-bg:#0f1115;
+            --code-br:#20232a;
+            --chip-bg:#151822;
+            --shadow: 0 10px 30px rgba(0,0,0,.35);
+            --ring: 2px solid #3b82f6;
+        }
+        @media (prefers-color-scheme: light){
+            :root{
+                --bg:#ffffff; --bg-elev:#f6f8fb; --text:#12131a; --muted:#5b6473;
+                --accent:#0b5cff; --accent-2:#0bb5ff; --border:#e6eaf0;
+                --code-bg:#0f1115; --code-br:#20232a; --chip-bg:#eef2ff;
+                --shadow:0 10px 30px rgba(17,24,39,.08);
+            }
+        }
+        *{box-sizing:border-box}
+        html,body{height:100%}
+        html{scroll-behavior:smooth}
+        body{
+            margin:0;background:var(--bg);color:var(--text);
+            font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif
+        }
+        a{color:var(--accent);text-decoration:none}
+        a:hover{text-decoration:underline}
+        .container{max-width:1100px;margin:0 auto;padding:24px}
+        .hero{padding:42px 0 16px}
+        .title{font-size:40px;line-height:1.1;margin:0 0 10px}
+        .lead{color:var(--muted);max-width:900px}
+        .chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 6px}
+        .chip{background:var(--chip-bg);color:var(--text);border:1px solid var(--border);border-radius:999px;padding:6px 10px;font-size:12px}
+
+        .bar{position:sticky;top:0;background:var(--bg-elev);border-bottom:1px solid var(--border);z-index:50}
+        .bar .inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:12px;padding:10px 24px;position:relative}
+        .bar a{font-weight:600;white-space:nowrap}
+        .spacer{flex:1}
+        .btn{
+            display:inline-flex;align-items:center;gap:8px;
+            border:1px solid var(--border);background:var(--bg-elev);
+            padding:10px 14px;border-radius:10px;color:var(--text);
+            text-decoration:none;box-shadow:var(--shadow)
+        }
+        .btn:hover{transform:translateY(-1px)}
+        .btn:focus-visible{outline:var(--ring);outline-offset:2px}
+
+        /* Top nav */
+        nav.top-links{display:flex;gap:8px;flex-wrap:wrap}
+        .btn[aria-current="page"]{outline:var(--ring);outline-offset:2px}
+
+        /* Responsive nav (hamburger) */
+        .nav-toggle{
+            display:none;align-items:center;justify-content:center;
+            width:42px;height:40px;border:1px solid var(--border);
+            background:var(--bg-elev);border-radius:10px;color:var(--text);
+            box-shadow:var(--shadow);cursor:pointer;
+        }
+        .nav-toggle:focus-visible{outline:var(--ring);outline-offset:2px}
+        .nav-icon,.nav-icon::before,.nav-icon::after{
+            display:block;width:20px;height:2px;background:var(--text);
+            border-radius:2px;position:relative;transition:transform .2s ease, opacity .2s ease, top .2s ease;
+        }
+        .nav-icon::before,.nav-icon::after{content:"";position:absolute;left:0}
+        .nav-icon::before{top:-6px}
+        .nav-icon::after{top:6px}
+        @media (max-width:760px){
+            .nav-toggle{display:inline-flex}
+            nav.top-links{
+                display:none;position:absolute;left:0;right:0;top:100%;
+                padding:12px 24px;gap:10px;flex-direction:column;
+                background:var(--bg-elev);border-bottom:1px solid var(--border);
+                box-shadow:var(--shadow);z-index:60;
+            }
+            .bar[data-open="true"] nav.top-links{display:flex}
+            nav.top-links .btn{width:100%;justify-content:center}
+            .bar[data-open="true"] .nav-icon{transform:rotate(45deg)}
+            .bar[data-open="true"] .nav-icon::before{top:0;transform:rotate(-90deg)}
+            .bar[data-open="true"] .nav-icon::after{opacity:0}
+        }
+
+        h2{margin-top:40px;font-size:26px}
+        h3{margin-top:30px;font-size:20px}
+        h4{margin-top:18px;font-size:18px}
+        .section{padding:10px 0 6px}
+
+        .card{background:var(--bg-elev);border:1px solid var(--border);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+        .grid{display:grid;gap:16px;grid-auto-flow:row}
+        .grid-2{grid-template-columns:minmax(0,1fr)}
+        @media (min-width:900px){ .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
+        .code{
+            position:relative;background:var(--code-bg);border:1px solid var(--code-br);
+            border-radius:12px;color:#e2e8f0;overflow:hidden;max-width:100%;
+        }
+        .code pre{
+            margin:0;padding:14px 16px;margin-top:40px;
+            overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;
+        }
+        .code code{
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+            font-size:13px;line-height:1.6;white-space:pre;display:block;max-width:100%;
+        }
+        .code.wrap code{white-space:pre-wrap;word-break:break-word}
+        .copy{
+            position:absolute;top:8px;right:8px;padding:6px 10px;border-radius:8px;font:inherit;font-size:12px;
+            border:1px solid #334155;background:#0b1220;color:#e2e8f0;cursor:pointer;
+        }
+        .copy:hover{background:#111827}
+        .copy:active{transform:translateY(1px)}
+        .copy:focus-visible{outline:var(--ring);outline-offset:2px}
+        .copy.success{background:#065f46;border-color:#065f46}
+        :not(pre)>code{
+            background:var(--bg-elev);border:1px solid var(--border);border-radius:6px;padding:0 .3em;
+            font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.95em;white-space:normal;overflow-wrap:anywhere;word-break:break-word;
+        }
+        .code pre::-webkit-scrollbar{height:8px}
+        .code pre::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:999px}
+
+        .list{padding-left:20px}
+        .toc{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+        .toc a{border:1px solid var(--border);background:var(--bg-elev);border-radius:999px;padding:6px 10px;font-size:12px}
+        .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--bg-elev);border:1px solid var(--border);padding:2px 6px;border-radius:6px;font-size:12px}
+        .kbd-row{display:inline-flex;gap:8px;align-items:center}
+        .note{border-left:4px solid var(--accent);padding:10px 12px;background:var(--bg-elev);border:1px solid var(--border);border-left-color:var(--accent);border-radius:12px}
+
+        footer{margin:50px 0 0;padding:24px 0;border-top:1px solid var(--border);color:var(--muted)}
+        .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    </style>
+</head>
+<body>
+<header class="bar">
+    <div class="inner">
+        <a href="./index.html">CollapseTable.JS</a>
+        <span class="spacer"></span>
+
+        <button class="nav-toggle" aria-controls="primary-nav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="nav-icon" aria-hidden="true"></span>
+            <span class="sr-only">Menu</span>
+        </button>
+
+        <nav id="primary-nav" class="top-links" aria-label="Primary">
+            <a class="btn" href="./demos/cdn.html">Live Demo</a>
+            <a class="btn" href="./index.html">Home</a>
+            <a class="btn" href="./npm-usage.html" aria-current="page">npm Usage</a>
+            <a class="btn" href="https://github.com/CodesEasy/CollapseTable.JS" rel="noopener">GitHub</a>
+        </nav>
+    </div>
+</header>
+
+<main id="top" class="container">
+    <section class="hero">
+        <h1 class="title">CollapseTable.JS — npm &amp; Framework Usage</h1>
+        <p class="lead">Install and use <code>@codeseasy/collapsetable</code> with npm across React, Next.js, Vue 3, Svelte, and Angular. For CDN usage and general docs, see <a href="./index.html">README</a>.</p>
+        <div class="chips">
+            <span class="chip">v<span id="v">1.1.1</span></span>
+            <span class="chip">Types included</span>
+            <span class="chip">UMD / ESM / CJS</span>
+        </div>
+        <nav class="toc" aria-label="On this page">
+            <a href="#install">Install</a>
+            <a href="#import">Import</a>
+            <a href="#minimal">Minimal Example</a>
+            <a href="#markup">Markup</a>
+            <a href="#api">API</a>
+            <a href="#ts">TypeScript</a>
+            <a href="#frameworks">Frameworks</a>
+            <a href="#lifecycle">Dynamic &amp; Lifecycle</a>
+            <a href="#multiple">Multiple Tables</a>
+            <a href="#details-render">Custom Details</a>
+            <a href="#styling">Styling</a>
+            <a href="#bundler">Bundler</a>
+            <a href="#troubleshooting">Troubleshooting</a>
+            <a href="#advanced">Advanced</a>
+            <a href="#support">Version &amp; Support</a>
+        </nav>
+    </section>
+
+    <section id="install" class="section">
+        <h2>1) Install</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>npm i @codeseasy/collapsetable
+# or
+pnpm add @codeseasy/collapsetable
+# or
+yarn add @codeseasy/collapsetable</code></pre>
+        </div>
+    </section>
+
+    <section id="import" class="section">
+        <h2>2) Import patterns</h2>
+        <h3>ESM (Vite, Rollup, modern bundlers)</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+        </div>
+
+        <h3>CommonJS (Webpack, Node older configs)</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>const CollapseTable = require('@codeseasy/collapsetable');
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+        </div>
+        <p>The package exports a default class. TypeScript definitions are bundled, so you get IntelliSense out of the box.</p>
+    </section>
+
+    <section id="minimal" class="section">
+        <h2>3) Minimal example (npm)</h2>
+        <div class="grid grid-2">
+            <div class="card">
+                <h3>Markup</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>&lt;table id="table1"&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th data-priority="1" data-min="180"&gt;Project&lt;/th&gt;
+      &lt;th data-priority="2" data-min="140"&gt;Client&lt;/th&gt;
+      &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+      &lt;th data-priority="4" data-min="120"&gt;Budget&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;Website Revamp&lt;/td&gt;&lt;td&gt;Acme&lt;/td&gt;&lt;td&gt;Active&lt;/td&gt;&lt;td&gt;₹2,50,000&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Android App&lt;/td&gt;&lt;td&gt;Globex&lt;/td&gt;&lt;td&gt;Planning&lt;/td&gt;&lt;td&gt;₹1,80,000&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+                </div>
+            </div>
+            <div class="card">
+                <h3>Init</h3>
+                <div class="code">
+                    <button class="copy" data-copy aria-label="Copy code">Copy</button>
+                    <pre><code>import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable();
+ct.set('#table1'); // id, selector, or &lt;table&gt; element</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="markup" class="section">
+        <h2>4) Markup requirements (quick recap)</h2>
+        <ul class="list">
+            <li><code>&lt;thead&gt;</code> with a <strong>single header <code>&lt;tr&gt;</code></strong> is required.</li>
+            <li>At least one <code>&lt;tbody&gt;</code> (multiple supported).</li>
+            <li><strong>No <code>colspan</code>/<code>rowspan</code></strong> in header/body for responsive collapsing. If present, collapsing is disabled (base styles still apply; console warns).</li>
+            <li>Per-column header attributes:
+                <ul class="list">
+                    <li><code>data-priority</code>: importance (1 = never hidden; higher numbers hide earlier)</li>
+                    <li><code>data-min</code>: width hint in <strong>px</strong></li>
+                    <li><code>data-label</code> (optional): label used in details panel</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <section id="api" class="section">
+        <h2>5) API (npm usage essentials)</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>const ct = new CollapseTable(globalOptions?);
+
+// Attach / detach
+const controller = ct.set(target, perTableOptions?);      // one table
+const controllers = ct.setAll(targets, perTableOptions?); // many
+ct.unset(target);
+ct.unsetAll(targets);
+
+// Refresh / controls
+ct.refresh(target?);
+ct.expandAll(target?);
+ct.collapseAll(target?);
+ct.expandRow(target, rowOrIndex);
+ct.collapseRow(target, rowOrIndex);
+
+// Options helpers
+ct.getOptions();
+ct.updateOptions(partial);
+
+// Events
+ct.on('expand'|'collapse'|'toggle'|'refit'|'destroy', handler);
+ct.off('expand'|'collapse'|'toggle'|'refit'|'destroy', handler);
+
+// Version
+CollapseTable.version; // "1.1.1"</code></pre>
+        </div>
+        <p>See <a href="./index.html#options">README options</a> for full defaults and event payloads.</p>
+    </section>
+
+    <section id="ts" class="section">
+        <h2>6) TypeScript tips</h2>
+        <p>Types are shipped in <code>src/types/collapsetable.d.ts</code>. Useful imports:</p>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>import CollapseTable from '@codeseasy/collapsetable';
+
+type Options = CollapseTable.Options;
+type Controller = CollapseTable.Controller;
+type RefitPayload = CollapseTable.RefitEventPayload;
+
+const ct = new CollapseTable&lt;Options&gt;(); // generic not required; for clarity</code></pre>
+        </div>
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.on('refit', (e: CollapseTable.RefitEventPayload) =&gt; {
+  console.log(e.initial, e.anyHidden);
+});</code></pre>
+        </div>
+    </section>
+
+    <section id="frameworks" class="section">
+        <h2>7) Framework recipes</h2>
+
+        <h3 id="react">7.1 React (Vite/CRA)</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>import { useEffect, useRef } from 'react';
+import CollapseTable from '@codeseasy/collapsetable';
+
+export default function OrdersTable({ rows }: { rows: Array&lt;any&gt; }) {
+  const tableRef = useRef&lt;HTMLTableElement | null&gt;(null);
+  const ctRef = useRef&lt;CollapseTable | null&gt;(null);
+
+  useEffect(() =&gt; {
+    const table = tableRef.current;
+    if (!table) return;
+
+    const ct = (ctRef.current ||= new CollapseTable());
+    ct.set(table, {
+      icons: { expand: '▶', collapse: '▼' },
+    });
+
+    return () =&gt; ct.unset(table);
+  }, []);
+
+  useEffect(() =&gt; {
+    ctRef.current?.refresh(tableRef.current!);
+  }, [rows]);
+
+  return (
+    &lt;table ref={tableRef} id="orders"&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+          &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+          &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        {rows.map((r, i) =&gt; (
+          &lt;tr key={i}&gt;&lt;td&gt;{r.project}&lt;/td&gt;&lt;td&gt;{r.client}&lt;/td&gt;&lt;td&gt;{r.status}&lt;/td&gt;&lt;/tr&gt;
+        ))}
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  );
+}</code></pre>
+        </div>
+
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>// Custom details rendering in React
+detailsRender(row, hiddenCols, cells) {
+  const root = document.createElement('div');
+  root.className = 'react-details';
+  // createRoot(root).render(&lt;MyDetails row={row} hiddenCols={hiddenCols} cells={cells} /&gt;);
+  root.innerHTML = hiddenCols.map(c =&gt; {
+    const label = c.th.getAttribute('data-label') || c.th.textContent || '';
+    return `&lt;div&gt;&lt;strong&gt;${label}:&lt;/strong&gt; ${cells[c.index]?.innerHTML ?? ''}&lt;/div&gt;`;
+  }).join('');
+  return root;
+}</code></pre>
+        </div>
+        <p class="note">Don’t rely on React’s synthetic events inside <code>detailsRender</code>; attach plain DOM listeners if needed.</p>
+
+        <h3 id="next">7.2 Next.js / Remix (SSR)</h3>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>'use client';
+import { useEffect, useRef } from 'react';
+import CollapseTable from '@codeseasy/collapsetable';
+
+export default function OrdersClient() {
+  const tableRef = useRef&lt;HTMLTableElement | null&gt;(null);
+
+  useEffect(() =&gt; {
+    const table = tableRef.current;
+    if (!table) return;
+    const ct = new CollapseTable();
+    ct.set(table);
+    return () =&gt; ct.unset(table);
+  }, []);
+
+  return (/* same markup as React example */);
+}</code></pre>
+        </div>
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>// or dynamic import (Next.js)
+import dynamic from 'next/dynamic';
+const OrdersClient = dynamic(() =&gt; import('./OrdersClient'), { ssr: false });</code></pre>
+        </div>
+
+        <h3 id="vue">7.3 Vue 3 (Composition API)</h3>
+        <div class="code wrap">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>&lt;script setup lang="ts"&gt;
+import { onMounted, onBeforeUnmount, ref, nextTick, watch } from 'vue';
+import CollapseTable from '@codeseasy/collapsetable';
+
+const tableEl = ref&lt;HTMLTableElement | null&gt;(null);
+const rows = ref([{ /* ... */ }]);
+let ct: CollapseTable | null = null;
+
+onMounted(async () =&gt; {
+  await nextTick();
+  if (!tableEl.value) return;
+  ct = new CollapseTable();
+  ct.set(tableEl.value, { tableLayout: 'auto' });
+});
+
+onBeforeUnmount(() =&gt; {
+  if (ct && tableEl.value) ct.unset(tableEl.value);
+});
+
+watch(rows, async () =&gt; {
+  await nextTick();
+  if (ct && tableEl.value) ct.refresh(tableEl.value);
+});
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;table ref="tableEl" id="orders"&gt;
+    &lt;thead&gt;
+      &lt;tr&gt;
+        &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+        &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+        &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+      &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+      &lt;tr v-for="(r,i) in rows" :key="i"&gt;
+        &lt;td&gt;{{ r.project }}&lt;/td&gt;&lt;td&gt;{{ r.client }}&lt;/td&gt;&lt;td&gt;{{ r.status }}&lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+&lt;/template&gt;</code></pre>
+        </div>
+
+        <h3 id="svelte">7.4 Svelte</h3>
+        <div class="code wrap">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>&lt;script lang="ts"&gt;
+  import { onMount, tick } from 'svelte';
+  import CollapseTable from '@codeseasy/collapsetable';
+
+  let tableEl: HTMLTableElement;
+  export let rows: Array&lt;any&gt; = [];
+  let ct: CollapseTable;
+
+  onMount(() =&gt; {
+    ct = new CollapseTable();
+    ct.set(tableEl);
+    return () =&gt; ct.unset(tableEl);
+  });
+
+  $: (async () =&gt; {
+    if (!ct || !tableEl) return;
+    await tick();
+    ct.refresh(tableEl);
+  })();
+&lt;/script&gt;
+
+&lt;table bind:this={tableEl} id="orders"&gt; ... &lt;/table&gt;</code></pre>
+        </div>
+
+        <h3 id="angular">7.5 Angular</h3>
+        <div class="code wrap">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>// orders.component.ts
+import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import CollapseTable from '@codeseasy/collapsetable';
+
+@Component({
+  selector: 'app-orders',
+  templateUrl: './orders.component.html',
+})
+export class OrdersComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('ordersTable', { static: true }) tableRef!: ElementRef&lt;HTMLTableElement&gt;;
+  rows = [...];
+  private ct = new CollapseTable();
+
+  ngAfterViewInit(): void {
+    this.ct.set(this.tableRef.nativeElement, { icons: { expand: '+', collapse: '−' } });
+  }
+  ngOnDestroy(): void {
+    this.ct.unset(this.tableRef.nativeElement);
+  }
+  refresh(): void {
+    this.ct.refresh(this.tableRef.nativeElement);
+  }
+}</code></pre>
+        </div>
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>&lt;!-- orders.component.html --&gt;
+&lt;table #ordersTable id="orders"&gt; ... &lt;/table&gt;</code></pre>
+        </div>
+    </section>
+
+    <section id="lifecycle" class="section">
+        <h2>8) Dynamic data &amp; lifecycle best-practices</h2>
+        <ul class="list">
+            <li>Initialize after the table exists in the DOM.</li>
+            <li>Cleanup on component unmount/destroy with <code>ct.unset(table)</code>.</li>
+            <li>When rows change (AJAX, filters, pagination), call <code>ct.refresh(table)</code>.</li>
+            <li>Hidden containers (<code>display:none</code>): default <code>deferWhenHidden: true</code> defers precise fitting. Call <code>refresh()</code> when revealed if needed.</li>
+            <li>Changing header attributes or columns? Call <code>refresh()</code>. Structural changes are observed; refreshing is still a good idea.</li>
+        </ul>
+    </section>
+
+    <section id="multiple" class="section">
+        <h2>9) Multiple tables</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>const ct = new CollapseTable();
+
+ct.setAll('table.responsive', { tableLayout: 'fixed' });
+// later…
+ct.expandAll();        // across all attached
+ct.collapseAll('#a');  // only table #a
+ct.unsetAll('table.responsive');</code></pre>
+        </div>
+    </section>
+
+    <section id="details-render" class="section">
+        <h2>10) Custom details rendering</h2>
+        <div class="code wrap">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>ct.set('#orders', {
+  detailsRender(row, hiddenColumns, cells) {
+    const wrap = document.createElement('div');
+    wrap.className = 'details-grid';
+    hiddenColumns.forEach(c =&gt; {
+      const label = c.th.getAttribute('data-label') || c.th.textContent || '';
+      const item = document.createElement('div');
+      item.className = 'details-item';
+      item.innerHTML = `&lt;strong&gt;${label}:&lt;/strong&gt; ${cells[c.index]?.innerHTML ?? ''}`;
+      wrap.appendChild(item);
+    });
+    return wrap; // or return a string of HTML
+  },
+});</code></pre>
+        </div>
+        <p>The function receives the row <code>&lt;tr&gt;</code>, an array of hidden column metadata, and the current cells. Return a <strong>Node</strong> or <strong>string</strong>. Return nothing to keep the default renderer.</p>
+    </section>
+
+    <section id="styling" class="section">
+        <h2>11) Styling &amp; theming (npm)</h2>
+        <p>The library injects tiny, scoped CSS under <code>.ctbl</code>. You can override <code>classNames</code> or target the default hooks:</p>
+        <div class="code">
+      <pre><code>.ctbl  .ctbl-control  .ctbl-toggle
+.ctbl-details  .ctbl-details-inner
+.ctbl-detail   .ctbl-name   .ctbl-value
+.ctbl-hide     .ctbl-vh</code></pre>
+        </div>
+        <div class="code" style="margin-top:12px">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>.ctbl .ctbl-toggle { padding: 6px 10px; font-weight: 600; }</code></pre>
+        </div>
+    </section>
+
+    <section id="bundler" class="section">
+        <h2>12) Bundler notes</h2>
+        <ul class="list">
+            <li><strong>Tree-shaking:</strong> Build is small; UMD is fine. No side-effectful CSS files—base CSS is injected once.</li>
+            <li><strong>SSR:</strong> Safe to import in SSR, but call <code>set(...)</code> on the <strong>client</strong> only.</li>
+            <li><strong>Transpilation:</strong> No special config required. If transpiling <code>node_modules</code>, exclude this package.</li>
+        </ul>
+    </section>
+
+    <section id="troubleshooting" class="section">
+        <h2>13) Troubleshooting (npm context)</h2>
+        <ul class="list">
+            <li><strong>Nothing collapses:</strong> Ensure some headers use <code>data-priority="2"</code> or higher (priority <code>1</code> never hides).</li>
+            <li><strong>Toggle not visible:</strong> The +/− column hides entirely when no non-priority-1 columns are hidden.</li>
+            <li><strong>Hidden containers:</strong> Default <code>deferWhenHidden: true</code> avoids bad measurements. Call <code>refresh()</code> when revealed.</li>
+            <li><strong>Fonts loaded late / layout shift:</strong> Call <code>refresh()</code> after fonts/styles finish loading.</li>
+            <li><strong><code>colspan</code>/<code>rowspan</code> present:</strong> Collapsing is disabled when spans are detected (console warning). Base styles still apply.</li>
+        </ul>
+    </section>
+
+    <section id="advanced" class="section">
+        <h2>14) Advanced: programmatic control</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>// Expand 1st row (0-based across all TBODY rows)
+ct.expandRow('#orders', 0);
+
+// Collapse a specific row element
+const row = document.querySelector('#orders tbody tr:nth-child(3)');
+ct.collapseRow('#orders', row);</code></pre>
+        </div>
+    </section>
+
+    <section id="support" class="section">
+        <h2>15) Version &amp; support</h2>
+        <div class="code">
+            <button class="copy" data-copy aria-label="Copy code">Copy</button>
+            <pre><code>console.log(CollapseTable.version); // "1.1.1"</code></pre>
+        </div>
+        <ul class="list">
+            <li><strong>Issues / PRs:</strong> <a href="https://github.com/CodesEasy/CollapseTable.JS">github.com/CodesEasy/CollapseTable.JS</a></li>
+            <li><strong>CDN usage &amp; general docs:</strong> <a href="./index.html">README</a></li>
+            <li><strong>License:</strong> MIT © 2025 Vishnu (Codes Easy)</li>
+        </ul>
+    </section>
+
+    <footer>
+        <div class="container">
+            <div>Built with ♥︎ — <a href="https://github.com/CodesEasy/CollapseTable.JS">GitHub</a> · <a href="./demos/cdn.html">Live Demo</a> · <a href="./index.html">Home</a></div>
+        </div>
+    </footer>
+</main>
+
+<script>
+    // Mobile nav
+    (() => {
+        const header = document.querySelector('.bar');
+        const toggle = document.querySelector('.nav-toggle');
+        const nav = document.getElementById('primary-nav');
+        if (!header || !toggle || !nav) return;
+
+        const close = () => {
+            header.removeAttribute('data-open');
+            toggle.setAttribute('aria-expanded','false');
+        };
+
+        toggle.addEventListener('click', () => {
+            const open = header.getAttribute('data-open') === 'true';
+            header.setAttribute('data-open', String(!open));
+            toggle.setAttribute('aria-expanded', String(!open));
+            if (!open) nav.querySelector('a')?.focus();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (header.getAttribute('data-open') === 'true' && !header.contains(e.target)) close();
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+        nav.addEventListener('click', (e) => { if (e.target.closest('a')) close(); });
+        const mq = window.matchMedia('(min-width: 761px)');
+        mq.addEventListener?.('change', (ev) => { if (ev.matches) close(); });
+    })();
+
+    // Copy buttons (with fallback)
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.copy[data-copy]');
+        if (!btn) return;
+        const code = btn.parentElement?.querySelector('pre > code');
+        if (!code) return;
+
+        const text = code.innerText;
+        const old = btn.textContent;
+
+        const flash = (label) => {
+            btn.classList.add('success');
+            btn.textContent = label || 'Copied';
+            btn.setAttribute('aria-live', 'polite');
+            setTimeout(() => {
+                btn.textContent = old;
+                btn.classList.remove('success');
+            }, 1200);
+        };
+
+        try {
+            await navigator.clipboard.writeText(text);
+            flash('Copied');
+        } catch {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.inset = '0';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); flash('Copied'); }
+            catch { btn.textContent = 'Copy failed'; }
+            document.body.removeChild(ta);
+        }
+    });
+
+    // Version badge
+    document.getElementById('v').textContent = '1.1.1';
+</script>
+</body>
+</html>
