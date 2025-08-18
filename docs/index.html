@@ -1,0 +1,768 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8">
+    <title>CollapseTable.JS · Responsive HTML tables with a per-row details panel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="CollapseTable.JS — lightweight, dependency-free JS to make HTML tables responsive by collapsing overflow columns into a per-row details panel.">
+    <meta name="keywords" content="responsive tables, HTML tables, JavaScript library, table collapse, mobile tables, responsive design, table details panel, accessible tables, no dependencies">
+    <meta name="author" content="Vishnu - Codes Easy">
+    <meta name="robots" content="index, follow">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color">
+    <link rel="canonical" href="https://codeseasy.github.io/CollapseTable.JS/">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://codeseasy.github.io/CollapseTable.JS/">
+    <meta property="og:title" content="CollapseTable.JS · Responsive HTML tables with a per-row details panel">
+    <meta property="og:description" content="CollapseTable.JS — lightweight, dependency-free JS to make HTML tables responsive by collapsing overflow columns into a per-row details panel.">
+    <meta property="og:image" content="https://codeseasy.github.io/CollapseTable.JS/assets/og-image.png">
+    <meta property="og:site_name" content="CollapseTable.JS">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://codeseasy.github.io/CollapseTable.JS/">
+    <meta property="twitter:title" content="CollapseTable.JS · Responsive HTML tables with a per-row details panel">
+    <meta property="twitter:description" content="CollapseTable.JS — lightweight, dependency-free JS to make HTML tables responsive by collapsing overflow columns into a per-row details panel.">
+    <meta property="twitter:image" content="https://codeseasy.github.io/CollapseTable.JS/assets/og-image.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+    <link rel="alternate icon" href="data:,">
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "CollapseTable.JS",
+            "description": "Lightweight, dependency-free JavaScript library to make HTML tables responsive by collapsing overflow columns into a per-row details panel.",
+            "url": "https://codeseasy.github.io/CollapseTable.JS/",
+            "downloadUrl": "https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.2.0/dist/collapsetable.min.js",
+            "version": "1.2.0",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Any",
+            "programmingLanguage": "JavaScript",
+            "license": "https://opensource.org/licenses/MIT",
+            "author": {
+                "@type": "Person",
+                "name": "Vishnu",
+                "url": "https://vishnu.wiki"
+            },
+            "publisher": {
+                "@type": "Organization",
+                "name": "Codes Easy",
+                "url": "https://www.codeseasy.com"
+            },
+            "codeRepository": "https://github.com/CodesEasy/CollapseTable.JS",
+            "keywords": "responsive tables, HTML tables, JavaScript library, table collapse, mobile tables, responsive design, table details panel, accessible tables, no dependencies"
+        }
+    </script>
+
+    <!-- Bootstrap 5 (CSS) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Prism.js CSS for syntax highlighting -->
+    <link id="prism-light" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+    <link id="prism-dark" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" disabled>
+
+    <!-- Early theme bootstrapping to avoid FOUC -->
+    <script>
+        (() => {
+            const storageKey = 'ctbl-theme';
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+            function applyTheme(isDark) {
+                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+                // Toggle Prism.js themes
+                const lightTheme = document.getElementById('prism-light');
+                const darkTheme = document.getElementById('prism-dark');
+                if (lightTheme && darkTheme) {
+                    lightTheme.disabled = isDark;
+                    darkTheme.disabled = !isDark;
+                }
+                // Update browser UI color
+                const meta = document.getElementById('meta-theme-color');
+                if (meta) meta.setAttribute('content', isDark ? '#0b0c10' : '#ffffff');
+                // Update aria-pressed state for toggle if it exists
+                const toggle = document.getElementById('themeToggle');
+                if (toggle) toggle.setAttribute('aria-pressed', String(isDark));
+            }
+
+            // Initial: prefer stored theme, else system preference, else light
+            const saved = localStorage.getItem(storageKey);
+            let isDark;
+            if (saved !== null) {
+                isDark = saved === 'dark';
+            } else {
+                isDark = mql.matches;
+            }
+            applyTheme(isDark);
+
+            // Listen for system theme changes only if no saved preference
+            mql.addEventListener?.('change', (e) => {
+                if (localStorage.getItem(storageKey) === null) {
+                    applyTheme(e.matches);
+                }
+            });
+
+            // Expose helpers for the UI
+            window.__ctblTheme = {
+                get: () => {
+                    const saved = localStorage.getItem(storageKey);
+                    return saved !== null ? saved === 'dark' : mql.matches;
+                },
+                toggle: () => {
+                    const currentIsDark = window.__ctblTheme.get();
+                    const newIsDark = !currentIsDark;
+                    localStorage.setItem(storageKey, newIsDark ? 'dark' : 'light');
+                    applyTheme(newIsDark);
+                    return newIsDark;
+                }
+            };
+        })();
+    </script>
+
+    <style>
+        /* Root & accessibility */
+        :root { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) {
+            :root { scroll-behavior: auto; }
+            * { animation: none !important; transition: none !important; }
+        }
+
+        /* Prevent accidental horizontal scrollbars */
+        html, body { max-width: 100%; overflow-x: clip; }
+
+        /* Make anchor jumps account for sticky navbar height */
+        .section { margin-top: 3rem; scroll-margin-top: 5.5rem; }
+        .section:first-child { margin-top: 0; }
+
+        /* Keep images/SVGs behaving responsively if added later */
+        img, svg { max-width: 100%; height: auto; }
+
+        /* Code blocks with copy button */
+        .code-block {
+            position: relative;
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.5rem;
+            background: var(--bs-body-tertiary);
+            transition: box-shadow 0.15s ease-in-out;
+        }
+        .code-block:hover { box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); }
+        .code-block pre {
+            margin: 0;
+            padding: 1rem 1.25rem;
+            max-width: 100%;
+            overflow: auto;
+            white-space: pre;
+            -webkit-overflow-scrolling: touch;
+            background: transparent;
+            border: none;
+            border-radius: inherit;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+        .code-block pre code { display: block; }
+        .code-block h3 {
+            margin-bottom: 0.5rem;
+            padding: 0.75rem 1rem 0;
+            font-weight: 600;
+            color: var(--bs-body-color);
+        }
+        .code-copy-btn {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            z-index: 1;
+            opacity: 0.85;
+            transition: opacity 0.2s ease;
+            border-radius: 0.25rem;
+        }
+        .code-copy-btn:hover { opacity: 1; }
+
+        /* Inline code wrapping */
+        :not(pre) > code {
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        /* Long links should wrap nicely */
+        a { overflow-wrap: anywhere; }
+
+        /* Theme toggle switch styling */
+        .theme-toggle {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem;
+            background: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+        }
+        .theme-toggle:hover { background: var(--bs-secondary-bg); }
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+        }
+        .theme-toggle-switch {
+            width: 2rem;
+            height: 1rem;
+            background: var(--bs-secondary-bg);
+            border-radius: 0.5rem;
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+        .theme-toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 0.75rem;
+            height: 0.75rem;
+            background: var(--bs-body-bg);
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        [data-bs-theme="dark"] .theme-toggle-switch { background: var(--bs-primary); }
+        [data-bs-theme="dark"] .theme-toggle-switch::after { transform: translateX(1rem); }
+
+        /* Ensure navbar toggler icon is visible across themes (fallback) */
+        .navbar-toggler-icon { background-image: var(--bs-navbar-toggler-icon-bg); }
+
+        /* Custom scrollbar styling - subtle and minimalistic */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+            transition: background-color 0.2s ease;
+        }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.3); }
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); }
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+        /* Firefox scrollbar styling */
+        * { scrollbar-width: thin; scrollbar-color: rgba(0, 0, 0, 0.2) transparent; }
+        [data-bs-theme="dark"] * { scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg border-bottom sticky-top bg-body">
+    <div class="container">
+        <a class="navbar-brand fw-semibold" href="#top">CollapseTable.JS</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"
+                aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="navMain" class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link px-2" href="#features">Features</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#quick-start">Quick Start</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#npm">npm</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#api">API</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#options">Options</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#styling">Styling</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#tips">Tips</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#cdn">CDN</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#license">License</a></li>
+            </ul>
+
+            <!-- Theme Toggle & Demo -->
+            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 mt-3 mt-lg-0">
+                <div class="theme-toggle" id="themeToggle" role="button" tabindex="0" aria-label="Toggle dark mode" aria-pressed="false">
+                    <span class="theme-toggle-label">🌙</span>
+                    <div class="theme-toggle-switch"></div>
+                    <span class="theme-toggle-label">☀️</span>
+                </div>
+
+                <a class="btn btn-primary btn-sm" href="./demos/cdn.html">Live Demo</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<header id="top" class="py-5 bg-body-secondary">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-8 text-center">
+                <h1 class="display-4 fw-bold mb-4">CollapseTable.JS</h1>
+                <p class="lead fs-5 mb-4">
+                    Make any HTML table <strong>responsive</strong>: low-priority columns automatically
+                    <strong>collapse</strong> into a per-row <strong>details</strong> panel with a
+                    <strong>+/−</strong> toggle.
+                </p>
+
+                <div class="d-flex flex-wrap justify-content-center gap-2 mb-4">
+                    <span class="badge bg-secondary fs-6 px-3 py-2">v<span id="ctbl-version">1.2.0</span></span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2">No dependencies</span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2">Accessible</span>
+                    <span class="badge bg-secondary fs-6 px-3 py-2">UMD / ESM / CJS</span>
+                </div>
+
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <a class="btn btn-primary" href="./demos/cdn.html">View Live Demo</a>
+                    <a class="btn btn-outline-primary" href="https://github.com/CodesEasy/CollapseTable.JS"
+                       rel="noopener">
+                        <svg width="16" height="16" fill="currentColor" class="bi bi-github me-1" viewBox="0 0 16 16" aria-label="GitHub">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                    <a class="btn btn-outline-secondary" href="./npm-usage.html">NPM Usage</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container py-5">
+    <!-- Features -->
+    <section id="features" class="section">
+        <h2 class="h3">Why CollapseTable?</h2>
+        <ul class="mt-3">
+            <li>📱 Keeps important columns visible; folds the rest into an inline details view</li>
+            <li>➕/➖ Per-row toggle (keyboard: <kbd>Enter</kbd> / <kbd>Space</kbd>)</li>
+            <li>♿ Accessible by default (<code>aria-expanded</code>, <code>aria-controls</code>,
+                <code>role="region"</code>, <code>aria-live="polite"</code>)
+            </li>
+            <li>🧩 Zero dependencies, tiny footprint</li>
+            <li>⚙️ Production-ready: Resize/Mutation/Intersection observers, hidden-container deferral, stable row IDs,
+                multi-<code>&lt;tbody&gt;</code> support
+            </li>
+            <li>🎛️ Flexible: <code>tableLayout</code>, <code>detailsRender</code> hook, custom icons/strings/classes
+            </li>
+            <li>🧼 Minimal CSS: only scoped utility classes are injected; your design system controls look &amp; feel
+            </li>
+            <li>🧪 Runtime mode: <code>production</code> (default) or <code>development</code> for helpful warnings</li>
+        </ul>
+    </section>
+
+    <!-- Quick Start -->
+    <section id="quick-start" class="section">
+        <h2 class="h3">Quick Start (CDN)</h2>
+
+        <div class="row g-4 mt-2">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-cdn-pin" aria-label="Copy pinned version">Copy
+                    </button>
+                    <h3 class="h6">Pinned version (recommended)</h3>
+                    <pre><code id="code-cdn-pin" class="language-html">&lt;script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.2.0/dist/collapsetable.min.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-cdn-latest" aria-label="Copy latest version">Copy
+                    </button>
+                    <h3 class="h6">Always latest</h3>
+                    <pre><code id="code-cdn-latest" class="language-html">&lt;script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@latest/dist/collapsetable.min.js"&gt;&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-2">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-init" aria-label="Copy initialize code">Copy</button>
+                    <h3 class="h6">Initialize</h3>
+                    <pre><code id="code-init" class="language-javascript">&lt;script&gt;
+  var ct = new CollapseTable();
+  // Optional during setup: show helpful warnings
+  // ct.setMode('development');
+
+  // target can be: "orders" (id without #), "#orders", ".orders-table", "table.responsive", or a &lt;table&gt; element
+  ct.set("table-id-here");
+&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-local" aria-label="Copy local file usage">Copy</button>
+                    <h3 class="h6">Use a local file (no CDN)</h3>
+                    <pre><code id="code-local" class="language-javascript">&lt;script src="/path/to/collapsetable.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var ct = new CollapseTable({ /* mode: 'development' */ });
+  ct.set("table1");
+&lt;/script&gt;</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-4 mb-0" role="note">
+            <strong>💡 Tip:</strong> Prefer a full example? See the <a class="alert-link fw-semibold"
+                                                                      href="./demos/cdn.html">Live Demo</a>.
+        </div>
+    </section>
+
+    <!-- npm -->
+    <section id="npm" class="section">
+        <h2 class="h3">Install via npm</h2>
+
+        <div class="row g-4 mt-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-npm" aria-label="Copy npm install">Copy</button>
+                    <h3 class="h6">Install</h3>
+                    <pre><code id="code-npm" class="language-bash">npm i @codeseasy/collapsetable</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-esm" aria-label="Copy ESM example">Copy</button>
+                    <h3 class="h6">ESM</h3>
+                    <pre><code id="code-esm" class="language-javascript">import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable({ /* mode: 'development' */ });
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-cjs" aria-label="Copy CommonJS example">Copy</button>
+                    <h3 class="h6">CommonJS</h3>
+                    <pre><code id="code-cjs" class="language-javascript">const CollapseTable = require('@codeseasy/collapsetable');
+
+const ct = new CollapseTable({ /* mode: 'development' */ });
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="border rounded p-4 bg-body-secondary">
+                    <h3 class="h6 mb-3">More (TypeScript, bundlers, frameworks)</h3>
+                    <p class="mb-0">See the dedicated guide: <a href="./npm-usage.html">NPM Usage</a></p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Markup requirements -->
+    <section id="markup" class="section">
+        <h2 class="h3">Markup requirements</h2>
+        <ul class="mt-3">
+            <li>A <code>&lt;thead&gt;</code> with <strong>one header row</strong> is required.</li>
+            <li>At least one <code>&lt;tbody&gt;</code> is required (multi-<code>&lt;tbody&gt;</code> supported).</li>
+            <li><strong>No <code>colspan</code>/<code>rowspan</code></strong> in header or body for responsive
+                collapsing. If spans are detected, collapsing is disabled (base styles still apply and a console warning
+                is emitted).
+            </li>
+            <li>The control (+/−) column is automatically inserted as the <strong>first</strong> column if not present.
+            </li>
+        </ul>
+        <h3 class="h6">Per-column attributes (on <code>&lt;th&gt;</code>)</h3>
+        <ul class="mb-3 px-3">
+            <li><code>data-priority</code> — importance; <code>1</code> = never hidden, higher numbers hide earlier</li>
+            <li><code>data-min</code> — width hint in <strong>px</strong></li>
+            <li><code>data-label</code> — optional label in the details panel (defaults to header text)</li>
+        </ul>
+        <div class="code-block mt-4">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-th" aria-label="Copy th attributes">Copy</button>
+
+            <pre><code
+                    id="code-th" class="language-html">&lt;th data-priority="4" data-min="160" data-label="Placed On"&gt;Date&lt;/th&gt;</code></pre>
+        </div>
+    </section>
+
+    <!-- API -->
+    <section id="api" class="section">
+        <h2 class="h3">API</h2>
+
+        <div class="code-block mt-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-ctor" aria-label="Copy constructor usage">Copy</button>
+            <h3 class="h6">Constructor</h3>
+            <pre><code id="code-ctor" class="language-javascript">const ct = new CollapseTable(globalOptions?);</code></pre>
+        </div>
+
+        <div class="row g-4 mt-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-set" aria-label="Copy attach/detach">Copy</button>
+                    <h3 class="h6">Attach / Detach</h3>
+                    <pre><code id="code-set" class="language-javascript">ct.set(target, perTableOptions?);      // one table
+ct.setAll(targets, perTableOptions?);  // many tables
+ct.unset(target);                      // remove one
+ct.unsetAll(targets);                  // remove many</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-refresh" aria-label="Copy refresh/controls">Copy
+                    </button>
+                    <h3 class="h6">Refresh & Controls</h3>
+                    <pre><code id="code-refresh" class="language-javascript">ct.refresh(target?);    // re-measure & refit (omit to refresh all)
+ct.expandAll(target?);  // expand details rows (only if some columns are hidden)
+ct.collapseAll(target?);
+
+ct.expandRow(target, rowOrIndex);   // index across all TBODY rows or pass a &lt;tr&gt;
+ct.collapseRow(target, rowOrIndex);</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="code-block mt-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-events" aria-label="Copy events list">Copy</button>
+            <h3 class="h6">Events</h3>
+            <pre><code id="code-events" class="language-javascript">ct.on('expand',   ({ table, row }) =&gt; {});
+ct.on('collapse', ({ table, row }) =&gt; {});
+ct.on('toggle',   ({ table, row, expanded }) =&gt; {});
+ct.on('refit',    ({ table, initial, anyHidden }) =&gt; {});
+ct.on('destroy',  ({ table }) =&gt; {}); // unsubscribe: ct.off('expand', handler)</code></pre>
+        </div>
+
+        <div class="code-block mt-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-mode" aria-label="Copy runtime mode usage">Copy</button>
+            <h3 class="h6">Runtime mode</h3>
+            <pre><code id="code-mode" class="language-javascript">// Set development mode to see helpful warnings during integration:
+ct.setMode('development');   // 'production' | 'development' (default: 'production')
+ct.getMode();                // =&gt; 'development'
+
+// You can also pass at construction or update globally:
+const ct2 = new CollapseTable({ mode: 'development' });
+ct.updateOptions({ mode: 'production' });</code></pre>
+        </div>
+    </section>
+
+    <!-- Options -->
+    <section id="options" class="section">
+        <h2 class="h3">Options (with defaults)</h2>
+        <div class="border rounded p-3 bg-body-tertiary code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-options" aria-label="Copy options">Copy</button>
+            <pre class="mt-2"><code id="code-options" class="language-json">{
+  "mode": "production",
+  "controlWidth": 46,
+  "minWidthDefault": 140,
+  "tableLayout": "auto",
+  "deferWhenHidden": true,
+  "attrs": {
+    "priority": "data-priority",
+    "min": "data-min",
+    "label": "data-label"
+  },
+  "classNames": {
+    "root": "ctbl",
+    "control": "ctbl-control",
+    "toggle": "ctbl-toggle",
+    "details": "ctbl-details",
+    "detailsInner": "ctbl-details-inner",
+    "detail": "ctbl-detail",
+    "name": "ctbl-name",
+    "value": "ctbl-value",
+    "hide": "ctbl-hide"
+  },
+  "icons": { "expand": "+", "collapse": "−" },
+  "strings": { "toggleTitle": "Show more", "show": "Show details", "hide": "Hide details" },
+  "detailsRender": null
+}</code></pre>
+        </div>
+
+        <div class="border rounded p-3 bg-body-tertiary code-block mt-1">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-override" aria-label="Copy overrides">Copy</button>
+            <pre class="mt-2"><code id="code-override" class="language-javascript">// Per-table override
+ct.set('#invoices', {
+  tableLayout: 'fixed',
+  icons: { expand: '▶', collapse: '▼' },
+  strings: { toggleTitle: 'More', show: 'Show', hide: 'Hide' }
+});
+
+// Global helpers
+ct.getOptions();                 // clone of current global options (includes mode)
+ct.getMode();                    // 'production' | 'development'
+ct.setMode('development');       // switch at runtime
+ct.updateOptions({ tableLayout: 'fixed' }); // update globals + refresh attached tables
+CollapseTable.version; // "1.2.0"</code></pre>
+        </div>
+    </section>
+
+    <!-- Styling & frameworks -->
+    <section id="styling" class="section">
+        <h2 class="h3">Styling & frameworks</h2>
+        <p class="mb-2">
+            Minimal CSS is injected by the library (scoped under <code>.ctbl</code>) so your design system remains in
+            control.
+            Using Bootstrap? Apply multiple classes to the toggle button via <code>classNames.toggle</code> and widen
+            the
+            control column slightly:
+        </p>
+
+        <div class="border rounded p-3 bg-body-tertiary code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-bs" aria-label="Copy Bootstrap example">Copy</button>
+            <pre class="mt-2"><code id="code-bs" class="language-javascript">const ct = new CollapseTable();
+ct.set('#table-project-list', {
+  classNames: {
+    root: 'ctbl',
+    control: 'ctbl-control',
+    toggle: 'ctbl-toggle btn btn-secondary btn-sm'
+  },
+  controlWidth: 56
+});</code></pre>
+        </div>
+    </section>
+
+    <!-- Tips -->
+    <section id="tips" class="section">
+        <h2 class="h3">Tips, limitations & troubleshooting</h2>
+        <ul class="mt-2">
+            <li><strong>Nothing collapses on mobile?</strong> Ensure some headers use <code>data-priority="2"</code> or
+                higher. Priority <code>1</code> never hides.
+            </li>
+            <li><strong>Toggle not visible?</strong> The +/− control shows only when at least one non-priority-1 column
+                is hidden. When nothing is hidden, the control column itself is hidden.
+            </li>
+            <li><strong>Hidden containers?</strong> With <code>deferWhenHidden: true</code>, precise fitting is deferred
+                until visible.
+            </li>
+            <li><strong><code>colspan</code>/<code>rowspan</code> present?</strong> Collapsing is disabled; base styles
+                still apply and a console warning is printed.
+            </li>
+            <li><strong>Multiple <code>&lt;tbody&gt;</code> sections?</strong> Supported. Row indices are 0-based across
+                all data rows in order.
+            </li>
+            <li><strong>Development warnings?</strong> Only shown in <code>development</code> mode (e.g., too many <code>data-priority="1"</code> columns, invalid/missing priorities). Default mode is <code>production</code> (silent).</li>
+            <li><strong>SSR/hydration</strong>: initialize on the client after the table exists in the DOM.</li>
+        </ul>
+    </section>
+
+    <!-- CDN links -->
+    <section id="cdn" class="section">
+        <h2 class="h3">CDN links</h2>
+        <ul class="mt-2">
+            <li><strong>Pinned version (1.2.0):</strong> <a
+                    href="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.2.0/dist/collapsetable.min.js">jsDelivr
+                – collapsetable.min.js</a></li>
+            <li><strong>Always latest:</strong> <a
+                    href="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@latest/dist/collapsetable.min.js">jsDelivr
+                – collapsetable.min.js</a></li>
+        </ul>
+    </section>
+
+    <!-- File structure -->
+    <section class="section">
+        <h2 class="h3">File structure</h2>
+        <div class="border rounded p-3 bg-body-tertiary">
+        <pre class="m-0"><code class="language-text">src/
+  CollapseTable.js
+  types/
+    collapsetable.d.ts
+dist/
+  collapsetable.min.js
+  collapsetable.js
+README.md
+npm_usage.md
+package.json</code></pre>
+        </div>
+        <p class="mt-2 mb-0"><strong>Types:</strong> Provided at <code>src/types/collapsetable.d.ts</code> and published
+            with the package.</p>
+    </section>
+
+    <!-- License -->
+    <section id="license" class="section">
+        <h2 class="h3">License</h2>
+        <p class="mb-0">MIT © 2025 <a href="https://vishnu.wiki">Vishnu</a> (<a href="https://www.codeseasy.com">Codes
+            Easy</a>).</p>
+    </section>
+</main>
+
+<footer class="border-top py-4 bg-body-tertiary">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <p class="mb-0 small text-muted">
+                    Built with ♥︎ by <a href="https://vishnu.wiki" class="text-decoration-none">Vishnu</a> ·
+                    MIT Licensed · <a href="https://www.codeseasy.com" class="text-decoration-none">Codes Easy</a>
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                    <a href="https://github.com/CodesEasy/CollapseTable.JS" class="btn btn-outline-secondary btn-sm" rel="noopener">
+                        <svg width="16" height="16" fill="currentColor" class="bi bi-github me-1" viewBox="0 0 16 16" aria-label="GitHub">
+                            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+                        </svg>
+                        GitHub
+                    </a>
+                    <a href="./demos/cdn.html" class="btn btn-outline-primary btn-sm">Live Demo</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap 5 (JS) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Prism.js for syntax highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script>
+    // Version badge
+    document.getElementById('ctbl-version').textContent = '1.2.0';
+
+    // Theme toggle
+    (() => {
+        const themeToggle = document.getElementById('themeToggle');
+
+        function handleToggle() {
+            const isDark = window.__ctblTheme.toggle();
+            themeToggle.setAttribute('aria-pressed', String(isDark));
+        }
+
+        themeToggle.addEventListener('click', handleToggle);
+        themeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+            }
+        });
+    })();
+
+    // Copy buttons (works for any .code-copy-btn with data-copy="#id")
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.code-copy-btn');
+        if (!btn) return;
+        const sel = btn.getAttribute('data-copy');
+        const code = document.querySelector(sel);
+        if (!code) return;
+
+        const text = code.innerText;
+        const original = btn.textContent;
+        try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = 'Copied';
+            btn.setAttribute('aria-live', 'polite');
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.add('btn-outline-secondary');
+                btn.classList.remove('btn-success');
+            }, 1200);
+        } catch {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+        }
+    });
+</script>
+</body>
+</html>

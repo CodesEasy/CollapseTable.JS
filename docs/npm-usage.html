@@ -1,0 +1,872 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <title>CollapseTable.JS — npm & Framework Usage</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Install and use @codeseasy/collapsetable via npm. Recipes for React, Next.js/Remix, Vue 3, Svelte, and Angular. API, runtime modes, TypeScript tips." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color" />
+    <link rel="canonical" href="./npm-usage.html" />
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Prism.js CSS for syntax highlighting (light/dark switch) -->
+    <link id="prism-light" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
+    <link id="prism-dark" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet" disabled>
+
+    <!-- Early theme bootstrapping to avoid FOUC -->
+    <script>
+        (() => {
+            const storageKey = 'ctbl-theme';
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+            function applyTheme(isDark) {
+                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+                // Toggle Prism theme
+                const lightTheme = document.getElementById('prism-light');
+                const darkTheme  = document.getElementById('prism-dark');
+                if (lightTheme && darkTheme) {
+                    lightTheme.disabled = isDark;
+                    darkTheme.disabled  = !isDark;
+                }
+                // Browser UI color
+                const meta = document.getElementById('meta-theme-color');
+                if (meta) meta.setAttribute('content', isDark ? '#0b0c10' : '#ffffff');
+                // Toggle button state
+                const toggle = document.getElementById('themeToggle');
+                if (toggle) toggle.setAttribute('aria-pressed', String(isDark));
+            }
+
+            // Initial: saved -> system -> light
+            const saved = localStorage.getItem(storageKey);
+            const isDark = saved !== null ? saved === 'dark' : mql.matches;
+            applyTheme(isDark);
+
+            // Listen for system changes only if user hasn't picked a theme
+            mql.addEventListener?.('change', (e) => {
+                if (localStorage.getItem(storageKey) === null) applyTheme(e.matches);
+            });
+
+            // Expose helpers
+            window.__ctblTheme = {
+                get: () => {
+                    const saved = localStorage.getItem(storageKey);
+                    return saved !== null ? saved === 'dark' : mql.matches;
+                },
+                toggle: () => {
+                    const next = !window.__ctblTheme.get();
+                    localStorage.setItem(storageKey, next ? 'dark' : 'light');
+                    applyTheme(next);
+                    return next;
+                }
+            };
+        })();
+    </script>
+
+    <style>
+        /* Root & accessibility */
+        :root { scroll-behavior: smooth; }
+        @media (prefers-reduced-motion: reduce) {
+            :root { scroll-behavior: auto; }
+            * { animation: none !important; transition: none !important; }
+        }
+
+        html, body { max-width: 100%; overflow-x: clip; }
+        .section { margin-top: 3rem; scroll-margin-top: 5.5rem; }
+        .section:first-child { margin-top: 0; }
+        img, svg { max-width: 100%; height: auto; }
+        a { overflow-wrap: anywhere; }
+
+        /* Code blocks with copy button */
+        .code-block {
+            position: relative;
+            border: 1px solid var(--bs-border-color);
+            border-radius: .5rem;
+            background: var(--bs-body-tertiary);
+            transition: box-shadow .15s ease-in-out;
+        }
+        .code-block:hover { box-shadow: 0 .125rem .25rem rgba(0,0,0,.075); }
+        .code-block h3, .code-block h4, .code-block .h6 {
+            margin: 0; padding: .75rem 1rem 0; font-weight: 600;
+        }
+        .code-block pre {
+            margin: 0; padding: 1rem 1.25rem; max-width: 100%; overflow: auto; white-space: pre;
+            -webkit-overflow-scrolling: touch; background: transparent; border: none; border-radius: inherit;
+            font-size: .875rem; line-height: 1.5;
+        }
+        :not(pre) > code { white-space: normal; word-break: break-word; }
+
+        .code-copy-btn {
+            position: absolute; top: .5rem; right: .5rem; z-index: 1;
+            opacity: .85; border-radius: .25rem; transition: opacity .2s ease;
+        }
+        .code-copy-btn:hover { opacity: 1; }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: relative; display: inline-flex; align-items: center; gap: .5rem;
+            padding: .375rem .75rem; border: 1px solid var(--bs-border-color);
+            border-radius: .375rem; background: var(--bs-body-bg); color: var(--bs-body-color);
+            font-size: .875rem; cursor: pointer; transition: all .15s ease-in-out; user-select: none;
+        }
+        .theme-toggle:hover { background: var(--bs-secondary-bg); }
+        .theme-toggle:focus-visible { outline: 2px solid var(--bs-primary); outline-offset: 2px; }
+        .theme-toggle-switch {
+            width: 2rem; height: 1rem; background: var(--bs-secondary-bg); border-radius: .5rem; position: relative;
+            transition: background-color .2s ease;
+        }
+        .theme-toggle-switch::after {
+            content:''; position: absolute; top: .125rem; left: .125rem; width: .75rem; height: .75rem;
+            background: var(--bs-body-bg); border-radius: 50%; transition: transform .2s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,.2);
+        }
+        [data-bs-theme="dark"] .theme-toggle-switch { background: var(--bs-primary); }
+        [data-bs-theme="dark"] .theme-toggle-switch::after { transform: translateX(1rem); }
+
+        /* Subtle scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); }
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); }
+        [data-bs-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.3); }
+        * { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.2) transparent; }
+        [data-bs-theme="dark"] * { scrollbar-color: rgba(255,255,255,.2) transparent; }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg border-bottom sticky-top bg-body">
+    <div class="container">
+        <a class="navbar-brand fw-semibold" href="./index.html">CollapseTable.JS</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"
+                aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="navMain" class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <!-- Core essentials -->
+                <li class="nav-item"><a class="nav-link px-2" href="#install">Install</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#example">Example</a></li>
+                <li class="nav-item"><a class="nav-link px-2" href="#api">API</a></li>
+                
+                <!-- Framework usage dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle px-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Usage
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#imports">Imports</a></li>
+                        <li><a class="dropdown-item" href="#markup">Markup</a></li>
+                        <li><a class="dropdown-item" href="#mode">Mode</a></li>
+                        <li><a class="dropdown-item" href="#ts">TypeScript</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#frameworks">Frameworks</a></li>
+                        <li><a class="dropdown-item" href="#lifecycle">Lifecycle</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Advanced dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle px-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Advanced
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#styling">Styling</a></li>
+                        <li><a class="dropdown-item" href="#troubleshooting">Troubleshoot</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="#support">Support</a></li>
+                    </ul>
+                </li>
+            </ul>
+
+            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 mt-3 mt-lg-0">
+                <div class="theme-toggle" id="themeToggle" role="button" tabindex="0" aria-label="Toggle dark mode" aria-pressed="false">
+                    <span>🌙</span>
+                    <div class="theme-toggle-switch"></div>
+                    <span>☀️</span>
+                </div>
+                <div class="d-flex gap-2">
+                    <a class="btn btn-outline-secondary btn-sm" href="https://github.com/CodesEasy/CollapseTable.JS/blob/latest/README.md">README</a>
+                    <a class="btn btn-outline-primary btn-sm" href="./demos/cdn.html">Live Demo</a>
+                    <a class="btn btn-primary btn-sm" href="https://github.com/CodesEasy/CollapseTable.JS" rel="noopener">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<header class="py-5 bg-body-secondary">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-9">
+                <h1 class="display-5 mb-3">npm &amp; Framework Usage</h1>
+                <p class="lead mb-3">
+                    Install and use <code>@codeseasy/collapsetable</code> with npm. Recipes for React, Next.js/Remix,
+                    Vue 3, Svelte, and Angular. Matches the theme of the main docs.
+                </p>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="badge text-bg-secondary">UMD / ESM / CJS</span>
+                    <span class="badge text-bg-secondary">Types included</span>
+                    <span class="badge text-bg-secondary">v<span id="ctbl-version">1.2.0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container pb-5">
+    <!-- 1) Install -->
+    <section id="install" class="section">
+        <h2 class="h3">1) Install</h2>
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-npm">Copy</button>
+                    <h3 class="h6">npm</h3>
+                    <pre><code id="code-npm" class="language-bash">npm i @codeseasy/collapsetable</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-pnpm">Copy</button>
+                    <h3 class="h6">pnpm</h3>
+                    <pre><code id="code-pnpm" class="language-bash">pnpm add @codeseasy/collapsetable</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-yarn">Copy</button>
+                    <h3 class="h6">yarn</h3>
+                    <pre><code id="code-yarn" class="language-bash">yarn add @codeseasy/collapsetable</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 2) Import patterns -->
+    <section id="imports" class="section">
+        <h2 class="h3">2) Import patterns</h2>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-esm">Copy</button>
+                    <h3 class="h6">ESM (Vite, Rollup, modern bundlers)</h3>
+                    <pre><code id="code-esm" class="language-ts">import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-cjs">Copy</button>
+                    <h3 class="h6">CommonJS (Webpack, older Node configs)</h3>
+                    <pre><code id="code-cjs" class="language-js">const CollapseTable = require('@codeseasy/collapsetable');
+
+const ct = new CollapseTable();
+ct.set('#orders');</code></pre>
+                </div>
+            </div>
+        </div>
+        <p class="small text-muted mt-2 mb-0">Default export with bundled TypeScript types for great IntelliSense.</p>
+    </section>
+
+    <!-- 3) Minimal example -->
+    <section id="example" class="section">
+        <h2 class="h3">3) Minimal example (npm)</h2>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-table">Copy</button>
+                    <h3 class="h6">HTML</h3>
+                    <pre><code id="code-table" class="language-html">&lt;table id="table1"&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th data-priority="1" data-min="180"&gt;Project&lt;/th&gt;
+      &lt;th data-priority="2" data-min="140"&gt;Client&lt;/th&gt;
+      &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+      &lt;th data-priority="4" data-min="120"&gt;Budget&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;Website Revamp&lt;/td&gt;&lt;td&gt;Acme&lt;/td&gt;&lt;td&gt;Active&lt;/td&gt;&lt;td&gt;₹2,50,000&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Android App&lt;/td&gt;&lt;td&gt;Globex&lt;/td&gt;&lt;td&gt;Planning&lt;/td&gt;&lt;td&gt;₹1,80,000&lt;/td&gt;&lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-init">Copy</button>
+                    <h3 class="h6">TypeScript / JS</h3>
+                    <pre><code id="code-init" class="language-ts">import CollapseTable from '@codeseasy/collapsetable';
+
+const ct = new CollapseTable();
+ct.set('#table1'); // id, selector, or &lt;table&gt; element</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 4) Markup -->
+    <section id="markup" class="section">
+        <h2 class="h3">4) Markup requirements (quick recap)</h2>
+        <ul class="mt-2">
+            <li><code>&lt;thead&gt;</code> with a <strong>single header <code>&lt;tr&gt;</code></strong> is required.</li>
+            <li>At least one <code>&lt;tbody&gt;</code> (multiple supported).</li>
+            <li><strong>No <code>colspan</code>/<code>rowspan</code></strong> in header/body for responsive collapsing (base styles still apply; console warns).</li>
+            <li>Per-column attributes on <code>&lt;th&gt;</code>:
+                <ul>
+                    <li><code>data-priority</code>: importance (<code>1</code> = never hidden; higher hides earlier)</li>
+                    <li><code>data-min</code>: width hint in <strong>px</strong></li>
+                    <li><code>data-label</code> (optional): label used in details panel</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <!-- 5) API -->
+    <section id="api" class="section">
+        <h2 class="h3">5) API (essentials)</h2>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-api">Copy</button>
+            <pre><code id="code-api" class="language-ts">const ct = new CollapseTable(globalOptions?);
+
+// Attach / detach
+const controller  = ct.set(target, perTableOptions?);      // one table
+const controllers = ct.setAll(targets, perTableOptions?);  // many
+ct.unset(target);
+ct.unsetAll(targets);
+
+// Refresh / controls
+ct.refresh(target?);
+ct.expandAll(target?);
+ct.collapseAll(target?);
+ct.expandRow(target, rowOrIndex);
+ct.collapseRow(target, rowOrIndex);
+
+// Options helpers
+ct.getOptions();
+ct.updateOptions(partial);
+
+// Runtime mode
+ct.setMode('development');       // 'production' | 'development' (default: 'production')
+ct.getMode();                    // -> current mode
+
+// Events
+ct.on('expand'|'collapse'|'toggle'|'refit'|'destroy', handler);
+ct.off('expand'|'collapse'|'toggle'|'refit'|'destroy', handler);
+
+// Version
+CollapseTable.version; // "1.2.0"</code></pre>
+        </div>
+    </section>
+
+    <!-- 6) Mode -->
+    <section id="mode" class="section">
+        <h2 class="h3">6) Runtime mode (development vs production)</h2>
+        <p class="mb-2">Default is <strong>production</strong> (silent). Switch to <strong>development</strong> to get helpful, one-time console warnings during integration.</p>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-mode">Copy</button>
+            <pre><code id="code-mode" class="language-ts">// a) At construction
+const ct = new CollapseTable({ mode: 'development' });
+
+// b) Later, at runtime
+ct.setMode('development');  // or 'production'
+
+// c) Read current mode
+console.log(ct.getMode()); // 'development' | 'production'</code></pre>
+        </div>
+        <ul class="small mt-2">
+            <li>Warns if &gt; 1 column uses <code>data-priority="1"</code> (priority 1 never hides).</li>
+            <li>Warns on invalid/missing <code>data-priority</code> values.</li>
+            <li>Warns if <code>colspan</code>/<code>rowspan</code> found (collapsing disabled; base styles applied).</li>
+        </ul>
+    </section>
+
+    <!-- 7) TypeScript -->
+    <section id="ts" class="section">
+        <h2 class="h3">7) TypeScript tips</h2>
+        <div class="row g-3">
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-ts-types">Copy</button>
+                    <h3 class="h6">Types</h3>
+                    <pre><code id="code-ts-types" class="language-ts">import CollapseTable from '@codeseasy/collapsetable';
+
+type Options     = CollapseTable.Options;
+type Controller  = CollapseTable.Controller;
+type RefitEvent  = CollapseTable.RefitEventPayload;
+
+const ct = new CollapseTable({ mode: 'development' });</code></pre>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="code-block">
+                    <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-ts-events">Copy</button>
+                    <h3 class="h6">Strongly typed events</h3>
+                    <pre><code id="code-ts-events" class="language-ts">ct.on('refit', (e) => {
+  // e is CollapseTable.RefitEventPayload
+  console.log(e.initial, e.anyHidden);
+});
+
+ct.on('toggle', (e) => {
+  // e is CollapseTable.ToggleEventPayload
+  console.log(e.row, e.expanded);
+});</code></pre>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 8) Framework recipes -->
+    <section id="frameworks" class="section">
+        <h2 class="h3">8) Framework recipes</h2>
+
+        <h3 class="h5 mt-3">8.1 React (Vite/CRA)</h3>
+        <div class="code-block mb-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-react">Copy</button>
+            <pre><code id="code-react" class="language-tsx">import { useEffect, useRef } from 'react';
+import CollapseTable from '@codeseasy/collapsetable';
+
+export default function OrdersTable({ rows }: { rows: Array&lt;any&gt; }) {
+  const tableRef = useRef&lt;HTMLTableElement | null&gt;(null);
+  const ctRef = useRef&lt;CollapseTable | null&gt;(null);
+
+  useEffect(() =&gt; {
+    const table = tableRef.current;
+    if (!table) return;
+
+    const ct = (ctRef.current ||= new CollapseTable({ mode: 'development' }));
+    ct.set(table, {
+      icons: { expand: '▶', collapse: '▼' },
+    });
+
+    return () =&gt; ct.unset(table);
+  }, []);
+
+  useEffect(() =&gt; {
+    if (tableRef.current) ctRef.current?.refresh(tableRef.current);
+  }, [rows]);
+
+  return (
+    &lt;table ref={tableRef} id="orders"&gt;
+      &lt;thead&gt;
+        &lt;tr&gt;
+          &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+          &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+          &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+        &lt;/tr&gt;
+      &lt;/thead&gt;
+      &lt;tbody&gt;
+        {rows.map((r, i) =&gt; (
+          &lt;tr key={i}&gt;&lt;td&gt;{r.project}&lt;/td&gt;&lt;td&gt;{r.client}&lt;/td&gt;&lt;td&gt;{r.status}&lt;/td&gt;&lt;/tr&gt;
+        ))}
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  );
+}</code></pre>
+        </div>
+
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-react-render">Copy</button>
+            <h4 class="h6 mb-1">Custom details rendering (React)</h4>
+            <p class="small mb-0 px-3">Return a DOM Node or HTML string (don’t rely on React synthetic events inside).</p>
+            <pre><code id="code-react-render" class="language-ts">detailsRender(row, hiddenCols, cells) {
+  const el = document.createElement('div');
+  el.className = 'react-details';
+  el.innerHTML = hiddenCols.map(c =&gt; {
+    const label = c.th.getAttribute('data-label') || c.th.textContent || '';
+    return `&lt;div&gt;&lt;strong&gt;${label}:&lt;/strong&gt; ${cells[c.index]?.innerHTML ?? ''}&lt;/div&gt;`;
+  }).join('');
+  return el;
+}</code></pre>
+        </div>
+
+        <h3 class="h5 mt-4">8.2 Next.js / Remix (SSR)</h3>
+        <div class="code-block mb-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-next">Copy</button>
+            <pre><code id="code-next" class="language-tsx">'use client';
+import { useEffect, useRef } from 'react';
+import CollapseTable from '@codeseasy/collapsetable';
+
+export default function OrdersClient() {
+  const tableRef = useRef&lt;HTMLTableElement | null&gt;(null);
+
+  useEffect(() =&gt; {
+    const table = tableRef.current;
+    if (!table) return;
+    const ct = new CollapseTable({ mode: 'development' });
+    ct.set(table);
+    return () =&gt; ct.unset(table);
+  }, []);
+
+  return (/* same markup as React example */);
+}</code></pre>
+        </div>
+
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-next-dynamic">Copy</button>
+            <h4 class="h6 mb-1">Dynamic import (client-only)</h4>
+            <pre><code id="code-next-dynamic" class="language-ts">import dynamic from 'next/dynamic';
+const OrdersClient = dynamic(() =&gt; import('./OrdersClient'), { ssr: false });</code></pre>
+        </div>
+
+        <h3 class="h5 mt-4">8.3 Vue 3 (Composition API)</h3>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-vue">Copy</button>
+            <pre><code id="code-vue" class="language-vue">&lt;script setup lang="ts"&gt;
+import { onMounted, onBeforeUnmount, ref, nextTick, watch } from 'vue';
+import CollapseTable from '@codeseasy/collapsetable';
+
+const tableEl = ref&lt;HTMLTableElement | null&gt;(null);
+const rows = ref&lt;Array&lt;any&gt;&gt;([]);
+let ct: CollapseTable | null = null;
+
+onMounted(async () =&gt; {
+  await nextTick();
+  if (!tableEl.value) return;
+  ct = new CollapseTable({ mode: 'development' });
+  ct.set(tableEl.value, { tableLayout: 'auto' });
+});
+
+onBeforeUnmount(() =&gt; {
+  if (ct && tableEl.value) ct.unset(tableEl.value);
+});
+
+watch(rows, async () =&gt; {
+  await nextTick();
+  if (ct && tableEl.value) ct.refresh(tableEl.value);
+});
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;table ref="tableEl" id="orders"&gt;
+    &lt;thead&gt;
+      &lt;tr&gt;
+        &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+        &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+        &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+      &lt;/tr&gt;
+    &lt;/thead&gt;
+    &lt;tbody&gt;
+      &lt;tr v-for="(r,i) in rows" :key="i"&gt;
+        &lt;td&gt;{{ r.project }}&lt;/td&gt;&lt;td&gt;{{ r.client }}&lt;/td&gt;&lt;td&gt;{{ r.status }}&lt;/td&gt;
+      &lt;/tr&gt;
+    &lt;/tbody&gt;
+  &lt;/table&gt;
+&lt;/template&gt;</code></pre>
+        </div>
+
+        <h3 class="h5 mt-4">8.4 Svelte</h3>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-svelte">Copy</button>
+            <pre><code id="code-svelte" class="language-svelte">&lt;script lang="ts"&gt;
+  import { onMount, tick } from 'svelte';
+  import CollapseTable from '@codeseasy/collapsetable';
+
+  let tableEl: HTMLTableElement;
+  export let rows: Array&lt;any&gt; = [];
+  let ct: CollapseTable;
+
+  onMount(() =&gt; {
+    ct = new CollapseTable({ mode: 'development' });
+    ct.set(tableEl);
+    return () =&gt; ct.unset(tableEl);
+  });
+
+  // refresh when rows change
+  $: (async () =&gt; {
+    if (!ct || !tableEl) return;
+    await tick();
+    ct.refresh(tableEl);
+  })();
+&lt;/script&gt;
+
+&lt;table bind:this={tableEl} id="orders"&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+      &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+      &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    {#each rows as r, i}
+      &lt;tr&gt;&lt;td&gt;{r.project}&lt;/td&gt;&lt;td&gt;{r.client}&lt;/td&gt;&lt;td&gt;{r.status}&lt;/td&gt;&lt;/tr&gt;
+    {/each}
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+        </div>
+
+        <h3 class="h5 mt-4">8.5 Angular</h3>
+        <div class="code-block mb-3">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-angular-ts">Copy</button>
+            <h4 class="h6 mb-1">Component (TypeScript)</h4>
+            <pre><code id="code-angular-ts" class="language-ts">import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild } from '@angular/core';
+import CollapseTable from '@codeseasy/collapsetable';
+
+@Component({
+  selector: 'app-orders',
+  templateUrl: './orders.component.html',
+})
+export class OrdersComponent implements AfterViewInit, OnDestroy {
+  @ViewChild('ordersTable', { static: true }) tableRef!: ElementRef&lt;HTMLTableElement&gt;;
+  rows = [...]; // your data
+  private ct = new CollapseTable({ mode: 'development' });
+
+  ngAfterViewInit(): void {
+    this.ct.set(this.tableRef.nativeElement, { icons: { expand: '+', collapse: '−' } });
+  }
+
+  ngOnDestroy(): void {
+    this.ct.unset(this.tableRef.nativeElement);
+  }
+
+  // Call after data updates that affect columns/widths:
+  refresh(): void {
+    this.ct.refresh(this.tableRef.nativeElement);
+  }
+}</code></pre>
+        </div>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-angular-html">Copy</button>
+            <h4 class="h6 mb-1">Template (HTML)</h4>
+            <pre><code id="code-angular-html" class="language-html">&lt;table #ordersTable id="orders"&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th data-priority="1" data-min="160"&gt;Project&lt;/th&gt;
+      &lt;th data-priority="2" data-min="120"&gt;Client&lt;/th&gt;
+      &lt;th data-priority="3" data-min="120"&gt;Status&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr *ngFor="let r of rows"&gt;
+      &lt;td&gt;{{ r.project }}&lt;/td&gt;&lt;td&gt;{{ r.client }}&lt;/td&gt;&lt;td&gt;{{ r.status }}&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;</code></pre>
+        </div>
+    </section>
+
+    <!-- 9) Lifecycle -->
+    <section id="lifecycle" class="section">
+        <h2 class="h3">9) Dynamic data &amp; lifecycle best practices</h2>
+        <ul class="mt-2">
+            <li><strong>Initialize after</strong> the table exists in the DOM.</li>
+            <li><strong>Cleanup</strong> on unmount/destroy with <code>ct.unset(table)</code>.</li>
+            <li>When rows change (AJAX, filters, pagination), call <code>ct.refresh(table)</code>.</li>
+            <li>Hidden containers: default <code>deferWhenHidden: true</code> avoids bad measurements; call <code>refresh()</code> when revealed.</li>
+            <li>Changing header attributes or columns: MutationObserver updates metadata; <code>refresh()</code> still recommended.</li>
+        </ul>
+    </section>
+
+    <!-- 10) Multiple tables -->
+    <section id="multiple" class="section">
+        <h2 class="h3">10) Multiple tables</h2>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-many">Copy</button>
+            <pre><code id="code-many" class="language-ts">const ct = new CollapseTable({ mode: 'production' });
+
+ct.setAll('table.responsive', { tableLayout: 'fixed' });
+// later…
+ct.expandAll();        // across all attached
+ct.collapseAll('#a');  // only table #a
+ct.unsetAll('table.responsive');</code></pre>
+        </div>
+    </section>
+
+    <!-- 11) Custom details rendering -->
+    <section id="render" class="section">
+        <h2 class="h3">11) Custom details rendering</h2>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-render">Copy</button>
+            <pre><code id="code-render" class="language-ts">ct.set('#orders', {
+  detailsRender(row, hiddenColumns, cells) {
+    const wrap = document.createElement('div');
+    wrap.className = 'details-grid';
+    hiddenColumns.forEach(c =&gt; {
+      const label = c.th.getAttribute('data-label') || c.th.textContent || '';
+      const item = document.createElement('div');
+      item.className = 'details-item';
+      item.innerHTML = `&lt;strong&gt;${label}:&lt;/strong&gt; ${cells[c.index]?.innerHTML ?? ''}`;
+      wrap.appendChild(item);
+    });
+    return wrap; // or return a string of HTML
+  },
+});</code></pre>
+        </div>
+        <p class="small text-muted mt-2 mb-0">Receives the row <code>&lt;tr&gt;</code>, an array of hidden column metadata, and the cells. Return a <strong>Node</strong> or <strong>string</strong>; return nothing to use the default renderer.</p>
+    </section>
+
+    <!-- 12) Styling -->
+    <section id="styling" class="section">
+        <h2 class="h3">12) Styling &amp; theming (npm)</h2>
+        <p>The library injects tiny, scoped CSS under <code>.ctbl</code> automatically. To match your design system, you can:</p>
+        <ul>
+            <li>Override <code>classNames</code> in options and provide your own CSS; or</li>
+            <li>Target the default hooks listed below.</li>
+        </ul>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-hooks">Copy</button>
+            <pre><code id="code-hooks" class="language-text">.ctbl            .ctbl-control    .ctbl-toggle
+.ctbl-details    .ctbl-details-inner
+.ctbl-detail     .ctbl-name       .ctbl-value
+.ctbl-hide       .ctbl-vh</code></pre>
+        </div>
+        <div class="code-block mt-2">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-bs">Copy</button>
+            <h3 class="h6 mb-1 px-3 pt-3">Bootstrap example (multi-class toggle + wider control column)</h3>
+            <pre><code id="code-bs" class="language-ts">const ct = new CollapseTable();
+ct.set('#table-project-list', {
+  classNames: {
+    root: 'ctbl',
+    control: 'ctbl-control',
+    toggle: 'ctbl-toggle btn btn-secondary btn-sm'
+  },
+  controlWidth: 56
+});</code></pre>
+        </div>
+    </section>
+
+    <!-- 13) Bundlers -->
+    <section id="bundlers" class="section">
+        <h2 class="h3">13) Bundler notes</h2>
+        <ul class="mt-2">
+            <li><strong>Tree-shaking:</strong> Build is small; UMD works fine with modern bundlers.</li>
+            <li><strong>SSR:</strong> Safe to import in SSR, but call <code>set(...)</code> only on the client (<code>useEffect</code> / <code>onMounted</code> / <code>ngAfterViewInit</code>).</li>
+            <li><strong>Transpilation:</strong> No special config needed; usually don’t transpile this package in <code>node_modules</code>.</li>
+        </ul>
+    </section>
+
+    <!-- 14) Troubleshooting -->
+    <section id="troubleshooting" class="section">
+        <h2 class="h3">14) Troubleshooting (npm context)</h2>
+        <ul class="mt-2">
+            <li><strong>Nothing collapses:</strong> Ensure some headers use <code>data-priority="2"</code> or higher (priority <code>1</code> never hides).</li>
+            <li><strong>Toggle not visible:</strong> The +/− column hides entirely when no non-priority-1 columns are hidden.</li>
+            <li><strong>Hidden containers:</strong> Default <code>deferWhenHidden: true</code> avoids bad measurements. Call <code>refresh()</code> when revealed.</li>
+            <li><strong>Fonts loaded late / layout shift:</strong> Call <code>refresh()</code> after fonts/styles finish loading.</li>
+            <li><strong><code>colspan</code>/<code>rowspan</code> present:</strong> Collapsing is disabled (console warning). Base styles still apply.</li>
+            <li><strong>Development warnings:</strong> Only shown in <code>development</code> mode (e.g., &gt;1 priority-1 columns, invalid priorities). Default is <code>production</code> (silent).</li>
+        </ul>
+    </section>
+
+    <!-- 15) Advanced -->
+    <section id="advanced" class="section">
+        <h2 class="h3">15) Advanced: programmatic control</h2>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-advanced">Copy</button>
+            <pre><code id="code-advanced" class="language-ts">// Expand 1st row (0-based across all TBODY rows)
+ct.expandRow('#orders', 0);
+
+// Collapse a specific row element
+const row = document.querySelector('#orders tbody tr:nth-child(3)')!;
+ct.collapseRow('#orders', row);</code></pre>
+        </div>
+    </section>
+
+    <!-- 16) Support -->
+    <section id="support" class="section">
+        <h2 class="h3">16) Version &amp; support</h2>
+        <div class="code-block">
+            <button class="btn btn-sm btn-outline-secondary code-copy-btn" data-copy="#code-version">Copy</button>
+            <pre><code id="code-version" class="language-ts">console.log(CollapseTable.version); // "1.2.0"</code></pre>
+        </div>
+        <ul class="mt-2">
+            <li><strong>Issues / PRs:</strong> <a href="https://github.com/CodesEasy/CollapseTable.JS">github.com/CodesEasy/CollapseTable.JS</a></li>
+            <li><strong>CDN &amp; general docs:</strong> <a href="./index.html">index.html</a></li>
+            <li><strong>License:</strong> MIT © 2025 Vishnu (Codes Easy)</li>
+        </ul>
+    </section>
+</main>
+
+<footer class="border-top py-4 bg-body-tertiary">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <p class="mb-0 small text-muted">
+                    Built with ♥︎ — <a href="./index.html" class="text-decoration-none">Home</a> ·
+                    <a href="https://github.com/CodesEasy/CollapseTable.JS/blob/latest/README.md" class="text-decoration-none">README</a>
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                    <a href="https://github.com/CodesEasy/CollapseTable.JS" class="btn btn-outline-secondary btn-sm" rel="noopener">
+                        GitHub
+                    </a>
+                    <a href="./demos/cdn.html" class="btn btn-outline-primary btn-sm">Live Demo</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap 5 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- Prism.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+
+<script>
+    // Version badge
+    document.getElementById('ctbl-version').textContent = '1.2.0';
+
+    // Theme toggle
+    (() => {
+        const themeToggle = document.getElementById('themeToggle');
+        function handleToggle() {
+            const isDark = window.__ctblTheme.toggle();
+            themeToggle.setAttribute('aria-pressed', String(isDark));
+        }
+        themeToggle.addEventListener('click', handleToggle);
+        themeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+            }
+        });
+    })();
+
+    // Copy buttons (works for any .code-copy-btn with data-copy="#id")
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.code-copy-btn');
+        if (!btn) return;
+        const sel = btn.getAttribute('data-copy');
+        const code = document.querySelector(sel);
+        if (!code) return;
+
+        const text = code.innerText;
+        const original = btn.textContent;
+        try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = 'Copied';
+            btn.classList.remove('btn-outline-secondary');
+            btn.classList.add('btn-success');
+            setTimeout(() => {
+                btn.textContent = original;
+                btn.classList.add('btn-outline-secondary');
+                btn.classList.remove('btn-success');
+            }, 1200);
+        } catch {
+            // Fallback
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+        }
+    });
+</script>
+</body>
+</html>

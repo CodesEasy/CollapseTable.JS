@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="utf-8" />
+    <title>CollapseTable.JS · CDN Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="description" content="Live demo of CollapseTable.JS via CDN. Resize the window to see responsive column collapsing with per-row details." />
+    <meta name="theme-color" content="#ffffff" id="meta-theme-color" />
+    <link rel="icon" href="data:,">
+
+    <!-- Bootstrap 5 (CSS) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Early theme bootstrapping (same implementation as index.html) -->
+    <script>
+        (() => {
+            const storageKey = 'ctbl-theme';
+            const mql = window.matchMedia('(prefers-color-scheme: dark)');
+
+            function applyTheme(isDark) {
+                document.documentElement.setAttribute('data-bs-theme', isDark ? 'dark' : 'light');
+
+                // Update browser UI color (address bar, etc.)
+                const meta = document.getElementById('meta-theme-color');
+                if (meta) meta.setAttribute('content', isDark ? '#0b0c10' : '#ffffff');
+
+                // Update aria-pressed on the toggle if it already exists
+                const toggle = document.getElementById('themeToggle');
+                if (toggle) toggle.setAttribute('aria-pressed', String(isDark));
+            }
+
+            // Initial: prefer stored theme, else system preference
+            const saved = localStorage.getItem(storageKey);
+            let isDark;
+            if (saved !== null) {
+                isDark = saved === 'dark';
+            } else {
+                isDark = mql.matches;
+            }
+            applyTheme(isDark);
+
+            // Listen for system theme changes only if no saved preference
+            mql.addEventListener?.('change', (e) => {
+                if (localStorage.getItem(storageKey) === null) {
+                    applyTheme(e.matches);
+                }
+            });
+
+            // Expose helpers for the UI
+            window.__ctblTheme = {
+                get: () => {
+                    const stored = localStorage.getItem(storageKey);
+                    return stored !== null ? stored === 'dark' : mql.matches;
+                },
+                toggle: () => {
+                    const currentIsDark = window.__ctblTheme.get();
+                    const newIsDark = !currentIsDark;
+                    localStorage.setItem(storageKey, newIsDark ? 'dark' : 'light');
+                    applyTheme(newIsDark);
+                    return newIsDark;
+                }
+            };
+        })();
+    </script>
+
+    <style>
+        /* Minimal styling needed for the theme toggle (same as index.html) */
+        .theme-toggle {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.375rem 0.75rem;
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem;
+            background: var(--bs-body-bg);
+            color: var(--bs-body-color);
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.15s ease-in-out;
+            user-select: none;
+        }
+        .theme-toggle:hover { background: var(--bs-secondary-bg); }
+        .theme-toggle:focus-visible {
+            outline: 2px solid var(--bs-primary);
+            outline-offset: 2px;
+        }
+        .theme-toggle-switch {
+            width: 2rem;
+            height: 1rem;
+            background: var(--bs-secondary-bg);
+            border-radius: 0.5rem;
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+        .theme-toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 0.125rem;
+            left: 0.125rem;
+            width: 0.75rem;
+            height: 0.75rem;
+            background: var(--bs-body-bg);
+            border-radius: 50%;
+            transition: transform 0.2s ease;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+        [data-bs-theme="dark"] .theme-toggle-switch { background: var(--bs-primary); }
+        [data-bs-theme="dark"] .theme-toggle-switch::after { transform: translateX(1rem); }
+    </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg border-bottom sticky-top bg-body">
+    <div class="container">
+        <a class="navbar-brand fw-semibold" href="../index.html">CollapseTable.JS</a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain"
+                aria-controls="navMain" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div id="navMain" class="collapse navbar-collapse">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link" href="../index.html">Docs</a></li>
+                <li class="nav-item"><a class="nav-link" href="./cdn.html" aria-current="page">CDN Demo</a></li>
+            </ul>
+
+            <!-- Theme Toggle (same as index.html) -->
+            <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-3 mt-3 mt-lg-0">
+                <div class="theme-toggle" id="themeToggle" role="button" tabindex="0" aria-label="Toggle dark mode" aria-pressed="false">
+                    <span class="theme-toggle-label">🌙</span>
+                    <div class="theme-toggle-switch"></div>
+                    <span class="theme-toggle-label">☀️</span>
+                </div>
+
+                <a class="btn btn-outline-secondary btn-sm" href="https://github.com/CodesEasy/CollapseTable.JS" rel="noopener">GitHub</a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Hero -->
+<header class="py-5 bg-body-secondary">
+    <div class="container">
+        <div class="row justify-content-center text-center">
+            <div class="col-xl-8">
+                <h1 class="display-5 fw-bold mb-3">CDN Demo</h1>
+                <p class="lead mb-4">
+                    Resize your browser to see lower-priority columns collapse into a per-row details panel with a +/− toggle.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <span class="badge text-bg-secondary">Pinned CDN</span>
+                    <span class="badge text-bg-secondary">No dependencies</span>
+                    <span class="badge text-bg-secondary">Accessible</span>
+                    <span class="badge text-bg-secondary">v<span id="ctbl-version">1.2.0</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<main class="container py-5">
+    <!-- Tip -->
+    <div class="alert alert-info" role="note">
+        <strong>Tip:</strong> The +/− control appears only when at least one column with
+        <code>data-priority &gt; 1</code> is hidden. Use <kbd>Enter</kbd> or <kbd>Space</kbd> on the control to toggle via keyboard.
+    </div>
+
+    <!-- Global runtime mode -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="dropdown">
+            <button class="btn btn-outline-dark btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                Runtime mode
+            </button>
+            <ul class="dropdown-menu">
+                <li><button class="dropdown-item" data-mode="production">Production (default)</button></li>
+                <li><button class="dropdown-item" data-mode="development">Development (show warnings)</button></li>
+            </ul>
+        </div>
+        <span id="modeBadge" class="badge text-bg-secondary">mode: production</span>
+    </div>
+
+    <!-- Controls for Table #1 -->
+    <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+        <div class="btn-group" role="group" aria-label="Expand/Collapse controls">
+            <button id="expand" class="btn btn-primary">Expand all</button>
+            <button id="collapse" class="btn btn-outline-primary">Collapse all</button>
+        </div>
+        <button id="refresh" class="btn btn-outline-secondary">Refresh</button>
+        <button id="addRow" class="btn btn-outline-success">Add a row (then refresh)</button>
+        <button id="expandFirst" class="btn btn-outline-dark">Expand first row</button>
+    </div>
+
+    <!-- Table #1 -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5 card-title mb-3">Orders (responsive table)</h2>
+            <div class="table-responsive">
+                <table id="table1" class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th data-priority="1" data-min="190">Project</th>
+                        <th data-priority="3" data-min="150">Client</th>
+                        <th data-priority="2" data-min="120">Status</th>
+                        <th data-priority="4" data-min="120">Budget</th>
+                        <th data-priority="5" data-min="140" data-label="Start Date">Start</th>
+                        <th data-priority="6" data-min="140" data-label="End Date">End</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Multi-Tenant SaaS</td>
+                        <td>Codes Easy</td>
+                        <td>Live</td>
+                        <td>₹3,50,000</td>
+                        <td>2025-02-15</td>
+                        <td>2025-05-30</td>
+                    </tr>
+                    <tr>
+                        <td>Fintech Wallet (Android)</td>
+                        <td>Fintech Startup</td>
+                        <td>UAT</td>
+                        <td>₹9,80,000</td>
+                        <td>2025-06-10</td>
+                        <td>—</td>
+                    </tr>
+                    <tr>
+                        <td>EdTech LMS</td>
+                        <td>University Partner</td>
+                        <td>Delivered</td>
+                        <td>₹11,00,000</td>
+                        <td>2024-12-01</td>
+                        <td>2025-04-10</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mb-0 mt-2">
+                Columns with lower <code>data-priority</code> numbers stay visible longer (priority <code>1</code> is never hidden).
+            </p>
+        </div>
+    </div>
+
+    <!-- Table #2: Bootstrap-styled toggle + custom detailsRender -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between">
+                <h2 class="h5 card-title mb-0">Projects (Bootstrap-styled toggles + custom details)</h2>
+                <div class="btn-group">
+                    <button id="expand2" class="btn btn-outline-primary btn-sm">Expand all</button>
+                    <button id="collapse2" class="btn btn-outline-secondary btn-sm">Collapse all</button>
+                </div>
+            </div>
+            <div class="table-responsive mt-3">
+                <table id="table2" class="table align-middle">
+                    <thead class="table-light">
+                    <tr>
+                        <th data-priority="1" data-min="180">Project</th>
+                        <th data-priority="2" data-min="140" data-label="Client Name">Client</th>
+                        <th data-priority="3" data-min="120" data-label="Phase">Status</th>
+                        <th data-priority="4" data-min="120">Budget</th>
+                        <th data-priority="5" data-min="140" data-label="Kickoff">Start</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>Marketing Site</td>
+                        <td>Acme Co.</td>
+                        <td>Discovery</td>
+                        <td>₹1,20,000</td>
+                        <td>2025-07-01</td>
+                    </tr>
+                    <tr>
+                        <td>iOS App</td>
+                        <td>Globex</td>
+                        <td>In Progress</td>
+                        <td>₹8,40,000</td>
+                        <td>2025-03-18</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted small mb-0 mt-2">
+                This table demonstrates a <em>Bootstrap button</em> toggle and a custom details renderer that lists hidden fields.
+            </p>
+        </div>
+    </div>
+
+    <!-- Event log -->
+    <section class="mt-4">
+        <h3 class="h6 mb-2">Live events</h3>
+        <ul id="eventLog" class="list-group small"></ul>
+    </section>
+
+    <!-- How to include via CDN -->
+    <section class="mt-5">
+        <h3 class="h5">Include &amp; initialize</h3>
+        <div class="border rounded p-3 bg-body-tertiary">
+<pre class="mb-0"><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.2.0/dist/collapsetable.min.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  var ct = new CollapseTable();             // defaults to production mode
+  // ct.setMode('development');             // optionally enable warnings during setup
+  ct.set("#table1");                        // id, selector, or &lt;table&gt; element
+&lt;/script&gt;</code></pre>
+        </div>
+    </section>
+</main>
+
+<footer class="border-top py-4 bg-body-tertiary">
+    <div class="container small text-muted d-flex flex-wrap gap-2 justify-content-between">
+        <span>Built with ♥︎ — <a class="text-decoration-none" href="../index.html">Docs</a></span>
+        <span><a class="text-decoration-none" href="https://github.com/CodesEasy/CollapseTable.JS" rel="noopener">GitHub</a></span>
+    </div>
+</footer>
+
+<!-- Bootstrap 5 (JS) -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- CollapseTable.JS (dev path for demo; swap to pinned CDN in production) -->
+<script src="https://cdn.jsdelivr.net/npm/@codeseasy/collapsetable@1.2.0/dist/collapsetable.min.js"></script>
+
+<script>
+    // Version badge
+    document.getElementById('ctbl-version').textContent =
+        (window.CollapseTable && CollapseTable.version) || '1.2.0';
+
+    // Theme toggle interaction (same behavior as index.html)
+    (() => {
+        const themeToggle = document.getElementById('themeToggle');
+        function handleToggle() {
+            const isDark = window.__ctblTheme.toggle();
+            themeToggle.setAttribute('aria-pressed', String(isDark));
+        }
+        themeToggle.addEventListener('click', handleToggle);
+        themeToggle.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggle();
+            }
+        });
+    })();
+
+    // Instantiate (defaults to production mode — quiet console)
+    const ct = new CollapseTable();
+
+    // Mode switcher
+    const modeBadge = document.getElementById('modeBadge');
+    document.querySelectorAll('[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.getAttribute('data-mode');
+            const result = ct.setMode(mode); // returns the applied mode
+            modeBadge.textContent = 'mode: ' + result;
+            modeBadge.className = 'badge ' + (result === 'development' ? 'text-bg-warning' : 'text-bg-secondary');
+            logEvent('mode', 'Switched to ' + result);
+        });
+    });
+
+    // Table #1 (default look)
+    ct.set('#table1');
+
+    // Table #2 with Bootstrap-styled toggle + custom details renderer
+    ct.set('#table2', {
+        classNames: {
+            toggle: 'ctbl-toggle btn btn-outline-secondary btn-sm'
+        },
+        controlWidth: 60,
+        detailsRender: (row, hiddenCols, cells) => {
+            // Build a Bootstrap list-group of hidden fields (no custom CSS)
+            const ul = document.createElement('ul');
+            ul.className = 'list-group list-group-flush';
+            hiddenCols.forEach(c => {
+                const li = document.createElement('li');
+                li.className = 'list-group-item';
+                const label = c.th.getAttribute('data-label') || c.th.textContent || '';
+                li.innerHTML = '<strong>' + label + ':</strong> ' + (cells[c.index]?.innerHTML || '');
+                ul.appendChild(li);
+            });
+            return ul;
+        }
+    });
+
+    // Controls for table #1
+    document.getElementById('expand').addEventListener('click', () => ct.expandAll('#table1'));
+    document.getElementById('collapse').addEventListener('click', () => ct.collapseAll('#table1'));
+    document.getElementById('refresh').addEventListener('click', () => ct.refresh('#table1'));
+    document.getElementById('expandFirst').addEventListener('click', () => ct.expandRow('#table1', 0));
+
+    // Add a row dynamically to showcase refresh flow
+    document.getElementById('addRow').addEventListener('click', () => {
+        const tbody = document.querySelector('#table1 tbody');
+        const tr = document.createElement('tr');
+
+        // No blank leading cell required — library manages control column.
+        tr.innerHTML = [
+            '<td>New Project</td>',
+            '<td>Acme Co.</td>',
+            '<td>Planning</td>',
+            '<td>₹2,20,000</td>',
+            '<td>2025-08-01</td>',
+            '<td>—</td>'
+        ].join('');
+
+        tbody.appendChild(tr);
+        ct.refresh('#table1'); // re-measure after DOM changes
+    });
+
+    // Controls for table #2
+    document.getElementById('expand2').addEventListener('click', () => ct.expandAll('#table2'));
+    document.getElementById('collapse2').addEventListener('click', () => ct.collapseAll('#table2'));
+
+    // Live event log
+    const logEl = document.getElementById('eventLog');
+    function logEvent(type, msg) {
+        const li = document.createElement('li');
+        li.className = 'list-group-item d-flex justify-content-between align-items-start';
+        li.innerHTML = '<span class="me-2">' + type + '</span><span class="text-muted">' + msg + '</span>';
+        logEl.prepend(li);
+        while (logEl.children.length > 12) logEl.removeChild(logEl.lastChild);
+    }
+
+    ct.on('refit', ({ table, initial, anyHidden }) => {
+        const id = table.id ? '#' + table.id : '(unnamed)';
+        logEvent('refit', id + ' · hidden? ' + anyHidden + (initial ? ' · initial' : ''));
+    });
+    ct.on('toggle', ({ table, row, expanded }) => {
+        const id = table.id ? '#' + table.id : '(unnamed)';
+        const idx = row.rowIndex;
+        logEvent('toggle', id + ' · row ' + idx + ' · ' + (expanded ? 'expanded' : 'collapsed'));
+    });
+</script>
+</body>
+</html>
