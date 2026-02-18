@@ -340,7 +340,7 @@
             </li>
             <li>🧩 Zero dependencies, tiny footprint</li>
             <li>⚙️ Production-ready: Resize/Mutation/Intersection observers, hidden-container deferral, stable row IDs,
-                multi-<code>&lt;tbody&gt;</code> support
+                multi-row <code>&lt;thead&gt;</code> and multi-<code>&lt;tbody&gt;</code> support
             </li>
             <li>🎛️ Flexible: <code>tableLayout</code>, <code>detailsRender</code> hook, custom icons/strings/classes
             </li>
@@ -455,8 +455,8 @@ ct.set('#orders');</code></pre>
     <section id="markup" class="section">
         <h2 class="h3">Markup requirements</h2>
         <ul class="mt-3">
-            <li>A <code>&lt;thead&gt;</code> with <strong>one header row</strong> is required.</li>
-            <li>At least one <code>&lt;tbody&gt;</code> is required (multi-<code>&lt;tbody&gt;</code> supported).</li>
+            <li>A <code>&lt;thead&gt;</code> is required. Multi-row headers are supported when all header/body cells are simple (no <code>colspan</code>/<code>rowspan</code>).</li>
+            <li>At least one <code>&lt;tbody&gt;</code> is required (multi-row <code>&lt;thead&gt;</code> and multi-<code>&lt;tbody&gt;</code> supported).</li>
             <li><strong>No <code>colspan</code>/<code>rowspan</code></strong> in header or body for responsive
                 collapsing. If spans are detected, collapsing is disabled (base styles still apply and a console warning
                 is emitted).

@@ -18,7 +18,7 @@ Make any HTML table **responsive**: low-priority columns automatically **collaps
 * ➕/➖ Per-row toggle (keyboard: **Enter** / **Space**)
 * ♿ Accessible by default (`aria-expanded`, `aria-controls`, `role="region"`, `aria-live="polite"`)
 * 🧩 Zero dependencies, tiny footprint
-* ⚙️ Production-ready: Resize/Mutation/Intersection observers, hidden-container deferral, stable row IDs, multi-`<tbody>` support
+* ⚙️ Production-ready: Resize/Mutation/Intersection observers, hidden-container deferral, stable row IDs, multi-row `<thead>` and multi-`<tbody>` support
 * 🎛️ Flexible: `tableLayout`, `detailsRender` hook, custom icons/strings/classes
 * 🧼 Minimal CSS: only scoped utility classes are injected; your design system controls look & feel
 
@@ -121,7 +121,7 @@ ct.set('#orders');
 
 ## Markup requirements
 
-* A `<thead>` with **one header row** (`<tr>`) is required.
+* A `<thead>` is required. Multi-row headers are supported when all header/body cells are simple (no `colspan`/`rowspan`).
 * At least one `<tbody>` is required (multi-`<tbody>` is supported).
 * **No `colspan`/`rowspan`** in header or body for responsive collapsing. If spans are detected, collapsing is **disabled** (base styles still apply and a console warning is emitted).
 * The control (+/−) column is automatically inserted as the **first** column if not present.
