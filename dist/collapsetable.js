@@ -334,6 +334,7 @@
 
             this._insertedControl = false; // whether we injected the control column
             this._insertedHeaderControls = new WeakSet(); // track THEAD rows that received injected control TH
+            this._insertedBodyControls = new WeakSet(); // track TBODY rows that received injected control TD
             this._uid = ++__CTBL_TABLE_SEQ; // unique prefix if table has no id
 
             this._initOnce();
@@ -439,6 +440,8 @@
                     if (!firstIsControl) {
                         const td = createEl("td", this.options.classNames.control);
                         row.insertBefore(td, row.firstChild);
+                        this._insertedControl = true;
+                        this._insertedBodyControls.add(row);
                     }
                 }
             }
@@ -1077,6 +1080,7 @@
                 for (const tb of this.tbodies) {
                     for (const row of Array.from(tb.rows)) {
                         if (row.classList.contains(this.options.classNames.details)) continue;
+                        if (!this._insertedBodyControls.has(row)) continue;
                         if (row.cells && row.cells.length) {
                             row.deleteCell(0);
                         }
