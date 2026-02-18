@@ -221,6 +221,38 @@
         return parts.every(c => el.classList.contains(c));
     }
 
+    function isStructuralOptionsChange(prev, next) {
+        const pa = prev && prev.attrs ? prev.attrs : {};
+        const na = next && next.attrs ? next.attrs : {};
+        const pc = prev && prev.classNames ? prev.classNames : {};
+        const nc = next && next.classNames ? next.classNames : {};
+
+        return (
+            pa.priority !== na.priority ||
+            pa.min !== na.min ||
+            pa.label !== na.label ||
+            pc.control !== nc.control ||
+            pc.details !== nc.details ||
+            pc.detailsInner !== nc.detailsInner ||
+            pc.detail !== nc.detail ||
+            pc.name !== nc.name ||
+            pc.value !== nc.value ||
+            pc.hide !== nc.hide ||
+            pc.toggle !== nc.toggle ||
+            prev.controlWidth !== next.controlWidth ||
+            prev.minWidthDefault !== next.minWidthDefault ||
+            prev.detailsRender !== next.detailsRender
+        );
+    }
+
+    function swapClassTokens(el, prevClassString, nextClassString) {
+        if (!el) return;
+        const prev = String(prevClassString || "").trim().split(/\s+/).filter(Boolean);
+        const next = String(nextClassString || "").trim().split(/\s+/).filter(Boolean);
+        prev.forEach(c => el.classList.remove(c));
+        next.forEach(c => el.classList.add(c));
+    }
+
     /** ========================================================================
      * Column Fit Algorithm (pure)
      * ======================================================================= */
@@ -301,6 +333,7 @@
             this._destroyed = false;
 
             this._insertedControl = false; // whether we injected the control column
+            this._insertedHeaderControls = new WeakSet(); // track THEAD rows that received injected control TH
             this._uid = ++__CTBL_TABLE_SEQ; // unique prefix if table has no id
 
             this._initOnce();
@@ -327,6 +360,7 @@
                 throw new Error("CollapseTable: table <thead> with at least one <tr> is required.");
             }
             this.headerRow = this.thead.rows[0];
+            this.headerRows = Array.from(this.thead.rows);
 
             this.tbodies = Array.from(this.table.tBodies || []);
             if (!this.tbodies.length) throw new Error("CollapseTable: table <tbody> is required.");
@@ -355,7 +389,9 @@
         }
 
         _checkSpans() {
-            const hasSpanInHead = Array.from(this.headerRow.cells).some(th => th.colSpan !== 1 || th.rowSpan !== 1);
+            const hasSpanInHead = this.headerRows.some(tr =>
+                Array.from(tr.cells).some(th => th.colSpan !== 1 || th.rowSpan !== 1)
+            );
             const hasSpanInBody = this.tbodies.some(tb =>
                 Array.from(tb.rows).some(tr =>
                     Array.from(tr.cells).some(td => td.colSpan !== 1 || td.rowSpan !== 1)
@@ -377,26 +413,34 @@
         }
 
         _ensureControlColumn() {
-            const firstCell = this.headerRow.cells[0];
-            const firstIsControl = firstCell && hasAllClasses(firstCell, this.options.classNames.control);
-            if (!firstIsControl) {
-                const th = createEl("th", this.options.classNames.control);
-                th.setAttribute("aria-hidden", "true");
-                th.setAttribute("scope", "col");
-                this.headerRow.insertBefore(th, this.headerRow.firstChild);
-                this._insertedControl = true;
+            for (const tr of this.headerRows) {
+                const firstCell = tr.cells[0];
+                const firstIsControl = firstCell && hasAllClasses(firstCell, this.options.classNames.control);
+                if (!firstIsControl) {
+                    const th = createEl("th", this.options.classNames.control);
+                    th.setAttribute("aria-hidden", "true");
+                    th.setAttribute("scope", "col");
+                    tr.insertBefore(th, tr.firstChild);
+                    this._insertedControl = true;
+                    this._insertedHeaderControls.add(tr);
+                } else {
+                    const th = tr.cells[0];
+                    th.setAttribute("aria-hidden", "true");
+                    th.setAttribute("scope", "col");
+                }
+            }
 
-                // Insert control TD for each row in each TBODY
-                for (const tb of this.tbodies) {
-                    for (const row of Array.from(tb.rows)) {
+            // Insert control TD for each row in each TBODY
+            for (const tb of this.tbodies) {
+                for (const row of Array.from(tb.rows)) {
+                    if (row.classList.contains(this.options.classNames.details)) continue;
+                    const first = row.cells[0];
+                    const firstIsControl = first && hasAllClasses(first, this.options.classNames.control);
+                    if (!firstIsControl) {
                         const td = createEl("td", this.options.classNames.control);
                         row.insertBefore(td, row.firstChild);
                     }
                 }
-            } else {
-                const th = this.headerRow.cells[0];
-                th.setAttribute("aria-hidden", "true");
-                th.setAttribute("scope", "col");
             }
         }
 
@@ -448,28 +492,33 @@
             for (const tb of this.tbodies) this._mountRowsInBody(tb);
 
             // Event delegation (click + keyboard)
-            this._clickHandler = (e) => {
-                const target = /** @type {Element} */ (e.target);
-                const btn = target && target.closest && target.closest(this._toggleSelector);
-                if (!btn || !this.table.contains(btn)) return;
-                e.preventDefault();
-                const row = btn.closest("tr");
-                if (!row) return;
-                this.toggle(row);
-            };
-            this._keyHandler = (e) => {
-                const target = /** @type {Element} */ (e.target);
-                const btn = target && target.closest && target.closest(this._toggleSelector);
-                if (!btn || !this.table.contains(btn)) return;
-                if (e.key === "Enter" || e.key === " ") {
+            if (!this._clickHandler) {
+                this._clickHandler = (e) => {
+                    const target = /** @type {Element} */ (e.target);
+                    const btn = target && target.closest && target.closest(this._toggleSelector);
+                    if (!btn || !this.table.contains(btn)) return;
                     e.preventDefault();
                     const row = btn.closest("tr");
                     if (!row) return;
                     this.toggle(row);
-                }
-            };
-            this.table.addEventListener("click", this._clickHandler);
-            this.table.addEventListener("keydown", this._keyHandler);
+                };
+                this.table.addEventListener("click", this._clickHandler);
+            }
+
+            if (!this._keyHandler) {
+                this._keyHandler = (e) => {
+                    const target = /** @type {Element} */ (e.target);
+                    const btn = target && target.closest && target.closest(this._toggleSelector);
+                    if (!btn || !this.table.contains(btn)) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        const row = btn.closest("tr");
+                        if (!row) return;
+                        this.toggle(row);
+                    }
+                };
+                this.table.addEventListener("keydown", this._keyHandler);
+            }
         }
 
         _mountRowsInBody(tbody) {
@@ -595,6 +644,8 @@
                     }
                     if (mustRebuild) {
                         this.headerRow = this.thead.rows[0];
+                        this.headerRows = Array.from(this.thead.rows);
+                        this._ensureControlColumn();
                         this.headers = Array.from(this.headerRow.cells);
                         this._buildColumns();
                         this._mountAllBodies();
@@ -674,10 +725,12 @@
         }
 
         _applyVisibility(hiddenSet) {
-            // Header
-            for (const col of this.columnsMeta) {
-                const hide = hiddenSet.has(col.index);
-                col.th.classList.toggle(this.options.classNames.hide, hide);
+            // Header (apply to all rows in THEAD so multi-row headers stay aligned)
+            for (const tr of this.headerRows) {
+                for (const col of this.columnsMeta) {
+                    const th = tr.cells[col.index];
+                    if (th) th.classList.toggle(this.options.classNames.hide, hiddenSet.has(col.index));
+                }
             }
             // Bodies
             for (const tb of this.tbodies) {
@@ -902,6 +955,76 @@
             this._refit();
         }
 
+        _migrateStructureClasses(prevOptions, nextOptions) {
+            if (!prevOptions || !nextOptions) return;
+
+            const prevDetails = prevOptions.classNames && prevOptions.classNames.details;
+            const nextDetails = nextOptions.classNames && nextOptions.classNames.details;
+            const prevDetailsInner = prevOptions.classNames && prevOptions.classNames.detailsInner;
+            const nextDetailsInner = nextOptions.classNames && nextOptions.classNames.detailsInner;
+
+            const prevControl = prevOptions.classNames && prevOptions.classNames.control;
+            const nextControl = nextOptions.classNames && nextOptions.classNames.control;
+            const prevToggle = prevOptions.classNames && prevOptions.classNames.toggle;
+            const nextToggle = nextOptions.classNames && nextOptions.classNames.toggle;
+
+            for (const tr of this.headerRows || []) {
+                if (tr && tr.cells && tr.cells[0]) {
+                    swapClassTokens(tr.cells[0], prevControl, nextControl);
+                }
+            }
+
+            for (const tb of this.tbodies) {
+                for (const row of Array.from(tb.rows)) {
+                    if (row.classList.contains(prevDetails)) {
+                        row.classList.remove(prevDetails);
+                        row.classList.add(nextDetails);
+                    }
+
+                    if (row.classList.contains(nextDetails)) {
+                        const wraps = Array.from(row.querySelectorAll("." + prevDetailsInner));
+                        wraps.forEach(w => swapClassTokens(w, prevDetailsInner, nextDetailsInner));
+                        continue;
+                    }
+
+                    if (row.cells && row.cells[0]) {
+                        swapClassTokens(row.cells[0], prevControl, nextControl);
+                    }
+
+                    const ctrlCell = row.cells && row.cells[0];
+                    if (!ctrlCell) continue;
+                    const buttons = Array.from(ctrlCell.querySelectorAll("button"));
+                    if (buttons.length > 1) {
+                        buttons.slice(1).forEach(btn => btn.remove());
+                    }
+                    if (buttons[0]) {
+                        swapClassTokens(buttons[0], prevToggle, nextToggle);
+                    }
+                }
+            }
+        }
+
+        _reconfigure(nextOptions, structural = false) {
+            const prevOptions = this.options;
+            this.options = nextOptions;
+            this._toggleSelector = buildButtonClassSelector(this.options.classNames.toggle);
+            if (!this.table.style.tableLayout || this.table.style.tableLayout !== this.options.tableLayout) {
+                this.table.style.tableLayout = this.options.tableLayout;
+            }
+
+            if (structural) {
+                this.headerRow = this.thead && this.thead.rows ? this.thead.rows[0] : this.headerRow;
+                this.headerRows = this.thead && this.thead.rows ? Array.from(this.thead.rows) : this.headerRows;
+                this._migrateStructureClasses(prevOptions, nextOptions);
+                this._ensureControlColumn();
+                this.headers = Array.from(this.headerRow.cells);
+                this._buildColumns();
+                for (const tb of this.tbodies) this._mountRowsInBody(tb);
+            }
+
+            this.refresh();
+        }
+
         destroy() {
             this._destroyed = true;
 
@@ -917,7 +1040,11 @@
             if (this._onWinResize) window.removeEventListener("resize", this._onWinResize);
 
             // Unhide all cells
-            for (const col of this.columnsMeta) col.th.classList.remove(this.options.classNames.hide);
+            for (const tr of this.headerRows) {
+                for (const cell of Array.from(tr.cells)) {
+                    cell.classList.remove(this.options.classNames.hide);
+                }
+            }
             for (const tb of this.tbodies) {
                 for (const row of Array.from(tb.rows)) {
                     if (row.classList.contains(this.options.classNames.details)) continue;
@@ -941,9 +1068,10 @@
 
             // If we injected the control column, remove it (restore original structure)
             if (this._insertedControl) {
-                // Remove header control th
-                if (this.headerRow && this.headerRow.cells && this.headerRow.cells[0]) {
-                    this.headerRow.deleteCell(0);
+                // Remove header control th only from rows we modified
+                for (const tr of this.headerRows) {
+                    if (!this._insertedHeaderControls.has(tr)) continue;
+                    if (tr && tr.cells && tr.cells[0]) tr.deleteCell(0);
                 }
                 // Remove first cell from each data row in each tbody
                 for (const tb of this.tbodies) {
@@ -1070,15 +1198,10 @@
 
             if (this._tables.has(el)) {
                 const ctrl = this._tables.get(el);
-                ctrl.options = merge(this.options, perTableOptions);
-                // Recompute selector if toggle classes were changed
-                ctrl._toggleSelector = buildButtonClassSelector(ctrl.options.classNames.toggle);
-                // apply tableLayout inline if changed
-                if (!ctrl.table.style.tableLayout || ctrl.table.style.tableLayout !== ctrl.options.tableLayout) {
-                    ctrl.table.style.tableLayout = ctrl.options.tableLayout;
-                }
+                const nextOptions = merge(this.options, perTableOptions);
+                const structural = isStructuralOptionsChange(ctrl.options, nextOptions);
                 ctrl._setMode(this._mode);
-                ctrl.refresh();
+                ctrl._reconfigure(nextOptions, structural);
                 return ctrl;
             }
 
@@ -1235,15 +1358,9 @@
             }
             this.options = merge(this.options, partial);
             this._tables.forEach((ctrl) => {
-                ctrl.options = merge(ctrl.options, partial);
-                // Recompute selector if toggle classes changed globally
-                if (partial && partial.classNames && typeof partial.classNames.toggle === 'string') {
-                    ctrl._toggleSelector = buildButtonClassSelector(ctrl.options.classNames.toggle);
-                }
-                if (partial && typeof partial.tableLayout !== 'undefined') {
-                    ctrl.table.style.tableLayout = ctrl.options.tableLayout;
-                }
-                ctrl.refresh();
+                const nextOptions = merge(ctrl.options, partial);
+                const structural = isStructuralOptionsChange(ctrl.options, nextOptions);
+                ctrl._reconfigure(nextOptions, structural);
             });
         }
 
